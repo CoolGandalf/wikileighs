@@ -1,4 +1,4 @@
-"""Take screenshots of leighpedia pages for visual verification."""
+"""Take screenshots of wikileighs pages for visual verification."""
 import asyncio
 import pathlib
 from playwright.async_api import async_playwright
@@ -13,7 +13,7 @@ PAGES = [
     ("about", "http://127.0.0.1:4321/about"),
 ]
 
-OUT = pathlib.Path(r"C:/Users/leigh/projects/leighpedia/screenshots")
+OUT = pathlib.Path(r"C:/Users/leigh/projects/wikileighs/screenshots")
 OUT.mkdir(exist_ok=True)
 
 async def main():

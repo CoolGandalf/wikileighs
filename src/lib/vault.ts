@@ -5,7 +5,15 @@ import matter from 'gray-matter';
 import { Marked } from 'marked';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
 
-const VAULT_ROOT = 'C:/Users/leigh/Documents/leigh-vault';
+const VAULT_ROOT = process.env.VAULT_ROOT;
+if (!VAULT_ROOT) {
+  throw new Error(
+    'VAULT_ROOT env var is not set. Point it at your local vault, e.g.\n' +
+    '  macOS/Linux:  export VAULT_ROOT=/Users/you/Projects/vault\n' +
+    '  Windows PS:   $env:VAULT_ROOT="C:/Users/you/Documents/leigh-vault"\n' +
+    'See .env.example for details.'
+  );
+}
 const NOTES_ROOT = path.join(VAULT_ROOT, 'notes');
 
 export interface Article {

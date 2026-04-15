@@ -1,4 +1,4 @@
-# Leighpedia — STATUS
+# WikiLeighs — STATUS
 
 **Updated:** 2026-04-14 (overnight build)
 **Status:** MVP running on dev server
@@ -12,7 +12,7 @@ Scoped to the `notes/` subtree. Frontmatter drives categorization; `[[wikilinks]
 
 Dev server (default — hot reload on markdown/code edits):
 ```
-cd ~/projects/leighpedia
+cd ~/projects/wikileighs
 npm run dev
 # -> http://127.0.0.1:4321/
 ```

@@ -6,17 +6,17 @@ const searchIndex = getSearchIndex();
   <a href="/" class="topbar-brand" style="color: inherit; text-decoration: none;">
     <span class="logo">L</span>
     <span class="topbar-wordmark">
-      <span class="title">LEIGHPEDIA</span>
+      <span class="title">WIKILEIGHS</span>
       <span class="subtitle">The Personal Encyclopedia</span>
     </span>
   </a>
-  <form class="search-form" id="search-form" role="search" autocomplete="off" onsubmit="return window.__leighpediaSearchSubmit(event)">
+  <form class="search-form" id="search-form" role="search" autocomplete="off" onsubmit="return window.__wikileighsSearchSubmit(event)">
     <input
       class="search-input"
       id="search-input"
       type="search"
-      placeholder="Search Leighpedia"
-      aria-label="Search Leighpedia"
+      placeholder="Search WikiLeighs"
+      aria-label="Search WikiLeighs"
     />
     <div class="search-results" id="search-results" role="listbox"></div>
   </form>
@@ -27,7 +27,7 @@ const searchIndex = getSearchIndex();
 </header>
 
 <script is:inline define:vars={{ searchIndex }}>
-  window.__leighpediaIndex = searchIndex;
+  window.__wikileighsIndex = searchIndex;
 
   const input = document.getElementById('search-input');
   const box = document.getElementById('search-results');
@@ -69,7 +69,7 @@ const searchIndex = getSearchIndex();
   function update() {
     const q = normalize(input.value.trim());
     if (!q) { matches = []; activeIdx = -1; render(); return; }
-    matches = window.__leighpediaIndex
+    matches = window.__wikileighsIndex
       .map(it => ({ item: it, s: score(q, it) }))
       .filter(x => x.s > 0)
       .sort((a, b) => b.s - a.s)
@@ -97,7 +97,7 @@ const searchIndex = getSearchIndex();
     if (!box.contains(e.target) && e.target !== input) box.classList.remove('open');
   });
 
-  window.__leighpediaSearchSubmit = function(ev) {
+  window.__wikileighsSearchSubmit = function(ev) {
     ev.preventDefault();
     if (matches[activeIdx]) window.location.href = '/wiki/' + matches[activeIdx].slug;
     else if (matches[0]) window.location.href = '/wiki/' + matches[0].slug;

@@ -1,8 +1,8 @@
-# Leighpedia
+# WikiLeighs
 
 A Wikipedia-styled web reader for Leigh's Obsidian vault. Renders the `notes/` subtree as browsable articles, inspired by [Farzapedia](https://farzapedia.com).
 
-**Not an editor.** The source of truth stays in Obsidian; Leighpedia reads the files and presents them.
+**Not an editor.** The source of truth stays in Obsidian; WikiLeighs reads the files and presents them.
 
 ## Stack
 
@@ -24,7 +24,7 @@ npm run dev      # http://127.0.0.1:4321/
 
 ## How it maps vault → wiki
 
-| Vault concept | Leighpedia concept |
+| Vault concept | WikiLeighs concept |
 |---|---|
 | `notes/**/*.md` | Articles |
 | `notes/people/*.md` | Type `person` (silver-circle initials placeholder) |

@@ -9,7 +9,7 @@ interface Props {
   activeType?: string;
 }
 
-const { title, description = 'Leighpedia — the personal encyclopedia', activeType } = Astro.props;
+const { title, description = 'WikiLeighs — the personal encyclopedia', activeType } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
@@ -17,7 +17,7 @@ const { title, description = 'Leighpedia — the personal encyclopedia', activeT
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <title>{title} — Leighpedia</title>
+    <title>{title} — WikiLeighs</title>
   </head>
   <body>
     <TopBar />
@@ -30,7 +30,7 @@ const { title, description = 'Leighpedia — the personal encyclopedia', activeT
       </main>
     </div>
     <footer class="page-footer">
-      Leighpedia · content rendered from <code>notes/</code> in leigh-vault · <a href="/about">About</a> · <a href="/random">Random article</a>
+      WikiLeighs · content rendered from <code>notes/</code> in leigh-vault · <a href="/about">About</a> · <a href="/random">Random article</a>
     </footer>
   </body>
 </html>
