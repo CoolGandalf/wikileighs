@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import { loadAllArticles, getTypeCounts } from '../lib/vault';
+const all = loadAllArticles();
+const types = getTypeCounts();
+---
+<Base title="About Leighpedia">
+  <article class="article-body">
+    <h1>About Leighpedia</h1>
+    <p>
+      Leighpedia is a personal, Wikipedia-styled web reader for Leigh's Obsidian vault. It renders
+      the <code>notes/</code> subtree as browsable articles — each file becomes a page, each
+      <code>[[wikilink]]</code> becomes navigation, each frontmatter block becomes an infobox.
+    </p>
+    <h2>Design</h2>
+    <ul>
+      <li>Inspired by <a href="https://wikipedia.org">Wikipedia</a> and Farza Majeed's
+          <a href="https://farzapedia.com" target="_blank" rel="noopener noreferrer">Farzapedia</a> personal wiki.</li>
+      <li>Read-only. The source of truth stays in Obsidian; changes made in the vault show up on reload.</li>
+      <li>Rendered statically from markdown at build time — no database, no editor, no login.</li>
+    </ul>
+    <h2>What's included</h2>
+    <p>
+      {all.length} articles across {types.length} categories. The reader is scoped to the
+      <code>notes/</code> subtree only. <code>journal/</code>, <code>inbox/</code>, <code>archive/</code>,
+      <code>Private/</code>, and <code>_local-*/</code> are intentionally excluded.
+    </p>
+    <h2>How articles are categorized</h2>
+    <p>
+      Each note's <code>type</code> frontmatter field determines its category. A note's first H1
+      is the title. H2 headings build the Contents box. Frontmatter becomes the infobox.
+    </p>
+    <h2>Wikilinks</h2>
+    <p>
+      <code>[[Page Name]]</code> links resolve against note titles and aliases. Broken wikilinks
+      render in red, the same way Wikipedia shows non-existent pages.
+    </p>
+    <h2>Source</h2>
+    <p>
+      Project lives at <code>~/projects/leighpedia/</code>. The vault content is read from
+      <code>C:/Users/leigh/Documents/leigh-vault/notes/</code>.
+    </p>
+  </article>
+</Base>

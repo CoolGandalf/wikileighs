@@ -1,0 +1,16 @@
+---
+import Base from '../layouts/Base.astro';
+import { loadAllArticles } from '../lib/vault';
+const all = loadAllArticles().map(a => a.slug);
+---
+<Base title="Random article">
+  <article class="article-body">
+    <h1>Random article</h1>
+    <p>Picking a random article...</p>
+    <p><a id="fallback" href="/">If you aren't redirected, click here.</a></p>
+  </article>
+  <script is:inline define:vars={{ all }}>
+    const slug = all[Math.floor(Math.random() * all.length)];
+    if (slug) window.location.replace('/wiki/' + slug);
+  </script>
+</Base>

@@ -1,0 +1,36 @@
+---
+import '../styles/global.css';
+import TopBar from '../components/TopBar.astro';
+import LeftRail from '../components/LeftRail.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  activeType?: string;
+}
+
+const { title, description = 'Leighpedia — the personal encyclopedia', activeType } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title} — Leighpedia</title>
+  </head>
+  <body>
+    <TopBar />
+    <div class="page-shell">
+      <aside class="left-rail">
+        <LeftRail activeType={activeType} />
+      </aside>
+      <main class="main-col">
+        <slot />
+      </main>
+    </div>
+    <footer class="page-footer">
+      Leighpedia · content rendered from <code>notes/</code> in leigh-vault · <a href="/about">About</a> · <a href="/random">Random article</a>
+    </footer>
+  </body>
+</html>

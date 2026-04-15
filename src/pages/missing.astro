@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+const url = new URL(Astro.request.url);
+const title = url.searchParams.get('title') || 'Unknown page';
+---
+<Base title={`${title} — missing`}>
+  <article class="article-body">
+    <h1>{title}</h1>
+    <p style="color: var(--color-muted);">
+      This page does not exist in the vault. Wikilinks pointing here will render in red until the
+      corresponding note is created in <code>notes/</code>.
+    </p>
+    <p><a href="/">← Back to main page</a></p>
+  </article>
+</Base>

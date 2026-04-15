@@ -1,0 +1,35 @@
+---
+import { getTypeCounts, getArticlesByType, humanizeType, pluralizeType } from '../lib/vault';
+
+interface Props { activeType?: string }
+const { activeType } = Astro.props;
+const typeCounts = getTypeCounts();
+const featuredTypes = typeCounts.slice(0, 4);
+const spotlightArticles = featuredTypes.flatMap(tc => getArticlesByType(tc.type).slice(0, 5));
+---
+<nav class="rail" aria-label="Navigation">
+  <div class="rail-heading">Navigation</div>
+  <ul>
+    <li><a href="/">Main page</a></li>
+    <li><a href="/random">Random article</a></li>
+    <li><a href="/about">About Leighpedia</a></li>
+  </ul>
+
+  <div class="rail-heading">Categories</div>
+  <ul>
+    {typeCounts.map(tc => (
+      <li>
+        <a href={`/category/${tc.type}`} style={tc.type === activeType ? 'font-weight: 700;' : ''}>
+          {pluralizeType(tc.type)} <span style="color: var(--color-muted)">({tc.count})</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <div class="rail-heading">Pages</div>
+  <ul>
+    {spotlightArticles.map(a => (
+      <li><a href={`/wiki/${a.slug}`}>{a.title}</a></li>
+    ))}
+  </ul>
+</nav>

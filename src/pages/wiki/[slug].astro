@@ -1,0 +1,122 @@
+---
+import Base from '../../layouts/Base.astro';
+import {
+  loadAllArticles,
+  getArticleBySlug,
+  getIncomingLinks,
+  getInfoboxAsPairs,
+  resolveWikilink,
+  slugify,
+  humanizeType,
+  pluralizeType,
+} from '../../lib/vault';
+
+export async function getStaticPaths() {
+  const articles = loadAllArticles();
+  return articles.map(a => ({ params: { slug: a.slug } }));
+}
+
+const { slug } = Astro.params;
+const article = getArticleBySlug(slug!);
+if (!article) {
+  return Astro.redirect('/missing?title=' + encodeURIComponent(slug || ''));
+}
+
+const infoboxPairs = getInfoboxAsPairs(article);
+const incoming = getIncomingLinks(article.slug).slice(0, 12);
+const isPerson = article.type === 'person';
+
+function initialsFor(title: string) {
+  const parts = title.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() || 'L';
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function renderInfoboxValue(key: string, raw: string): string {
+  if (key === 'tags') {
+    return raw.split(/,\s*/).map(t => `<span class="tag-chip">${escapeHtml(t)}</span>`).join(' ');
+  }
+  if (key === 'related') {
+    return raw.split(/,\s*/).map(t => {
+      const cleaned = t.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0].trim();
+      const res = resolveWikilink(cleaned);
+      if (res) return `<a href="/wiki/${res.slug}">${escapeHtml(cleaned)}</a>`;
+      return `<span class="wikilink-broken" style="color: var(--color-link-broken);">${escapeHtml(cleaned)}</span>`;
+    }).join(', ');
+  }
+  if (key === 'source' && /^https?:\/\//i.test(raw)) {
+    return `<a href="${raw}" target="_blank" rel="noopener noreferrer">${escapeHtml(raw.replace(/^https?:\/\//, '').slice(0, 40))}</a>`;
+  }
+  return escapeHtml(raw);
+}
+
+function escapeHtml(s: string): string {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+}
+
+const breadcrumbBits: string[] = [];
+breadcrumbBits.push(`<a href="/category/${article.type}">${humanizeType(article.type)}</a>`);
+if (article.created) breadcrumbBits.push(`created ${article.created}`);
+if (article.updated && article.updated !== article.created) breadcrumbBits.push(`updated ${article.updated}`);
+---
+<Base title={article.title} description={article.firstParagraph || article.title} activeType={article.type}>
+  <div class="breadcrumb">
+    <Fragment set:html={breadcrumbBits.join(' · ')} />
+  </div>
+  <nav class="tabs">
+    <a class="active" href={`/wiki/${article.slug}`}>Article</a>
+    <a href={`/category/${article.type}`}>{humanizeType(article.type)}</a>
+    {article.tags.slice(0, 4).map(t => (
+      <a href={`/tag/${slugify(t)}`}>#{t}</a>
+    ))}
+  </nav>
+
+  <article class="article-body">
+    <h1>{article.title}</h1>
+
+    {(infoboxPairs.length > 0 || isPerson) && (
+      <aside class="infobox" aria-label="Infobox">
+        <div class="infobox-header">{article.title}</div>
+        {isPerson && (
+          <div class="infobox-image">
+            <span class="silver-circle">{initialsFor(article.title)}</span>
+          </div>
+        )}
+        {infoboxPairs.length > 0 && (
+          <table class="infobox-table">
+            <tbody>
+              {infoboxPairs.map(p => (
+                <tr>
+                  <th>{humanizeType(p.key)}</th>
+                  <td><Fragment set:html={renderInfoboxValue(p.key, p.value)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </aside>
+    )}
+
+    {article.toc.length >= 2 && (
+      <div class="toc-box" style="float: none; clear: none; margin-bottom: 1rem;">
+        <div class="toc-box-title">Contents</div>
+        <ol>
+          {article.toc.filter(t => t.level === 2).map(t => (
+            <li><a href={`#${t.id}`}>{t.text}</a></li>
+          ))}
+        </ol>
+      </div>
+    )}
+
+    <Fragment set:html={article.html} />
+  </article>
+
+  {incoming.length > 0 && (
+    <section style="margin-top: 1.5rem; border-top: 1px solid var(--color-border-light); padding-top: 0.7rem;">
+      <h2 style="font-family: var(--font-serif); font-weight: 400; font-size: 1.15rem; margin-bottom: 0.4rem;">What links here</h2>
+      <ul style="list-style: disc; margin-left: 1.35rem; font-size: 0.9rem; columns: 2; column-gap: 1.5rem;">
+        {incoming.map(i => <li style="break-inside: avoid;"><a href={`/wiki/${i.slug}`} style="color: var(--color-link); text-decoration: none;">{i.title}</a> <span style="color: var(--color-muted); font-style: italic;">— {humanizeType(i.type)}</span></li>)}
+      </ul>
+    </section>
+  )}
+</Base>

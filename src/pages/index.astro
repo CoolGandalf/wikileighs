@@ -1,0 +1,119 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  loadAllArticles,
+  getTypeCounts,
+  getRecentArticles,
+  getFeaturedArticle,
+  getArticlesByType,
+  humanizeType,
+  pluralizeType,
+} from '../lib/vault';
+
+const all = loadAllArticles();
+const typeCounts = getTypeCounts();
+const recent = getRecentArticles(8);
+const featured = getFeaturedArticle();
+
+const categoriesForBrowse = typeCounts
+  .map(tc => ({
+    ...tc,
+    articles: getArticlesByType(tc.type).slice(0, 12),
+    total: tc.count,
+  }))
+  .filter(c => c.articles.length);
+---
+<Base title="Main page">
+  <section class="welcome-block">
+    <h1 class="welcome-title">Welcome to Leighpedia,</h1>
+    <p style="font-size: 15px; line-height: 1.6;">
+      the free encyclopedia that Leigh is writing. {all.length} articles across {typeCounts.length} categories,
+      rendered from the <code>notes/</code> subtree of his Obsidian vault.
+    </p>
+  </section>
+
+  <div class="contents-row">
+    <div>
+      {featured && (
+        <section class="featured-block">
+          <div class="featured-header">Featured article</div>
+          <div class="featured-body">
+            <div class="featured-image-placeholder" aria-hidden="true"></div>
+            <span class="featured-title"><a href={`/wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">{featured.title}</a></span>
+            {' '}— {featured.firstParagraph}
+            {' '}
+            <a href={`/wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">(continue reading...)</a>
+            <div style="clear: both;"></div>
+          </div>
+        </section>
+      )}
+
+      <section class="browse-block">
+        <h2 class="browse-title">Browse by category</h2>
+        <div class="browse-grid">
+          {categoriesForBrowse.map(cat => (
+            <div class="browse-category">
+              <h3><a href={`/category/${cat.type}`} style="color: inherit; text-decoration: none;">{pluralizeType(cat.type)}</a></h3>
+              <ul>
+                {cat.articles.map(a => (
+                  <li>
+                    <a href={`/wiki/${a.slug}`}>{a.title}</a>
+                    <span class="type"> — {humanizeType(a.type)}</span>
+                  </li>
+                ))}
+                {cat.total > cat.articles.length && (
+                  <li><a href={`/category/${cat.type}`} style="color: var(--color-muted);">...and {cat.total - cat.articles.length} more</a></li>
+                )}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="card">
+        <div class="card-header">Recently updated</div>
+        <div class="card-body">
+          <ul>
+            {recent.map(a => (
+              <li>
+                <a href={`/wiki/${a.slug}`} style="color: var(--color-link); text-decoration: none;">{a.title}</a>
+                <span class="date">{a.updated}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">About Leighpedia</div>
+        <div class="card-body">
+          <p>
+            Leighpedia is a personal encyclopedia — everything I'm consuming, doing, and thinking about.
+            It's Leigh's Obsidian vault, rendered as a browsable web reader inspired by Wikipedia and Farzapedia.
+          </p>
+          <p style="margin-top: 0.5rem;">
+            <a href="/about" style="color: var(--color-link); text-decoration: none;">See the About page →</a>
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">By the numbers</div>
+        <div class="card-body">
+          <ul>
+            <li><span>Total articles</span><span class="date">{all.length}</span></li>
+            <li><span>Categories</span><span class="date">{typeCounts.length}</span></li>
+            {typeCounts.slice(0, 6).map(tc => (
+              <li>
+                <span><a href={`/category/${tc.type}`} style="color: var(--color-link); text-decoration: none;">{pluralizeType(tc.type)}</a></span>
+                <span class="date">{tc.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+</Base>

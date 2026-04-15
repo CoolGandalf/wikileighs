@@ -1,0 +1,106 @@
+---
+import { getSearchIndex } from '../lib/vault';
+const searchIndex = getSearchIndex();
+---
+<header class="topbar">
+  <a href="/" class="topbar-brand" style="color: inherit; text-decoration: none;">
+    <span class="logo">L</span>
+    <span class="topbar-wordmark">
+      <span class="title">LEIGHPEDIA</span>
+      <span class="subtitle">The Personal Encyclopedia</span>
+    </span>
+  </a>
+  <form class="search-form" id="search-form" role="search" autocomplete="off" onsubmit="return window.__leighpediaSearchSubmit(event)">
+    <input
+      class="search-input"
+      id="search-input"
+      type="search"
+      placeholder="Search Leighpedia"
+      aria-label="Search Leighpedia"
+    />
+    <div class="search-results" id="search-results" role="listbox"></div>
+  </form>
+  <nav class="topbar-actions">
+    <a class="btn" href="/random">Random</a>
+    <a class="btn" href="/about">About</a>
+  </nav>
+</header>
+
+<script is:inline define:vars={{ searchIndex }}>
+  window.__leighpediaIndex = searchIndex;
+
+  const input = document.getElementById('search-input');
+  const box = document.getElementById('search-results');
+  let activeIdx = -1;
+  let matches = [];
+
+  function normalize(s) { return (s || '').toLowerCase(); }
+
+  function score(q, item) {
+    const n = normalize(item.title);
+    const ali = item.aliases.map(normalize);
+    if (n === q) return 1000;
+    if (ali.includes(q)) return 900;
+    if (n.startsWith(q)) return 500 - n.length;
+    if (ali.some(a => a.startsWith(q))) return 450 - item.title.length;
+    if (n.includes(q)) return 200 - n.length;
+    const tagHit = item.tags.some(t => normalize(t).includes(q));
+    if (tagHit) return 120;
+    const exHit = normalize(item.excerpt).includes(q);
+    if (exHit) return 80;
+    return 0;
+  }
+
+  function render() {
+    if (!matches.length) { box.classList.remove('open'); box.innerHTML = ''; return; }
+    box.innerHTML = matches.map((m, i) => `
+      <a data-idx="${i}" class="${i === activeIdx ? 'active' : ''}" href="/wiki/${m.slug}">
+        <div class="title">${escape(m.title)}</div>
+        <div class="meta">${escape(m.type)}${m.excerpt ? ' · ' + escape(m.excerpt.slice(0, 70)) : ''}</div>
+      </a>
+    `).join('');
+    box.classList.add('open');
+  }
+
+  function escape(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function update() {
+    const q = normalize(input.value.trim());
+    if (!q) { matches = []; activeIdx = -1; render(); return; }
+    matches = window.__leighpediaIndex
+      .map(it => ({ item: it, s: score(q, it) }))
+      .filter(x => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 12)
+      .map(x => x.item);
+    activeIdx = matches.length ? 0 : -1;
+    render();
+  }
+
+  input?.addEventListener('input', update);
+
+  input?.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { if (!matches.length) return; activeIdx = (activeIdx + 1) % matches.length; render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { if (!matches.length) return; activeIdx = (activeIdx - 1 + matches.length) % matches.length; render(); e.preventDefault(); }
+    else if (e.key === 'Enter') {
+      if (matches[activeIdx]) {
+        e.preventDefault();
+        window.location.href = '/wiki/' + matches[activeIdx].slug;
+      }
+    }
+    else if (e.key === 'Escape') { input.value = ''; matches = []; activeIdx = -1; render(); }
+  });
+
+  document.addEventListener('click', e => {
+    if (!box.contains(e.target) && e.target !== input) box.classList.remove('open');
+  });
+
+  window.__leighpediaSearchSubmit = function(ev) {
+    ev.preventDefault();
+    if (matches[activeIdx]) window.location.href = '/wiki/' + matches[activeIdx].slug;
+    else if (matches[0]) window.location.href = '/wiki/' + matches[0].slug;
+    return false;
+  };
+</script>

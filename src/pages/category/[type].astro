@@ -1,0 +1,42 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getTypeCounts, getArticlesByType, humanizeType, pluralizeType } from '../../lib/vault';
+
+export async function getStaticPaths() {
+  return getTypeCounts().map(tc => ({ params: { type: tc.type } }));
+}
+
+const { type } = Astro.params;
+const articles = getArticlesByType(type!);
+const groups = new Map<string, typeof articles>();
+for (const a of articles) {
+  const letter = (a.title[0] || '#').toUpperCase();
+  const key = /[A-Z]/.test(letter) ? letter : '#';
+  if (!groups.has(key)) groups.set(key, []);
+  groups.get(key)!.push(a);
+}
+const sortedGroups = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+---
+<Base title={pluralizeType(type!)} activeType={type}>
+  <div class="breadcrumb"><a href="/">Main page</a> · Category</div>
+  <article class="article-body">
+    <h1>Category: {pluralizeType(type!)}</h1>
+    <p>
+      {articles.length} {articles.length === 1 ? 'article' : 'articles'} of type <strong>{humanizeType(type!)}</strong>.
+    </p>
+
+    {sortedGroups.map(([letter, list]) => (
+      <section style="margin-top: 1rem;">
+        <h2 id={`group-${letter}`}>{letter}</h2>
+        <ul style="list-style: none; padding: 0; column-count: 2; column-gap: 2rem;">
+          {list.map(a => (
+            <li style="padding: 0.15rem 0; break-inside: avoid;">
+              <a href={`/wiki/${a.slug}`}>{a.title}</a>
+              <span style="color: var(--color-muted); font-style: italic; font-size: 0.85em;"> — {humanizeType(a.type)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </article>
+</Base>
