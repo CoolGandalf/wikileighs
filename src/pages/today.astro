@@ -1,0 +1,109 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  getDailyNote,
+  getVoiceMemosForDate,
+  getTodos,
+  getCleanTranscriptPreview,
+} from '../lib/vault';
+
+const today = new Date();
+const daily = getDailyNote(today);
+const memos = getVoiceMemosForDate(today);
+const todosHtml = getTodos();
+
+const weekday = today.toLocaleDateString('en-US', { weekday: 'long' });
+const monthDay = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+const headerDate = `${weekday}, ${monthDay}`;
+
+const memosWithPreview = memos.map(m => ({
+  article: m,
+  preview: getCleanTranscriptPreview(m.bodyMd, 5),
+}));
+---
+<Base title="Today" description={`Today's daily note, voice memos, and todos for ${headerDate}.`}>
+  <div class="breadcrumb"><a href="/">Main page</a> · Today</div>
+  <article class="article-body">
+    <h1>{headerDate}</h1>
+
+    <section class="today-section">
+      <h2 id="daily">Daily note</h2>
+      {daily ? (
+        <div class="today-daily">
+          <Fragment set:html={daily.html} />
+        </div>
+      ) : (
+        <p style="color: var(--color-muted);"><em>No daily note yet for today.</em></p>
+      )}
+    </section>
+
+    <section class="today-section">
+      <h2 id="memos">Voice memos <span style="color: var(--color-muted); font-size: 0.85em; font-weight: 400;">({memosWithPreview.length})</span></h2>
+      {memosWithPreview.length === 0 ? (
+        <p style="color: var(--color-muted);"><em>No voice memos for today.</em></p>
+      ) : (
+        <ul class="today-memo-list">
+          {memosWithPreview.map(({ article, preview }) => (
+            <li>
+              <div class="today-memo-title">{article.title}</div>
+              {preview.length > 0 && (
+                <div class="today-memo-preview">
+                  {preview.map(line => <p>{line}</p>)}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section class="today-section">
+      <h2 id="todos">Todos</h2>
+      {todosHtml ? (
+        <div class="today-todos">
+          <Fragment set:html={todosHtml} />
+        </div>
+      ) : (
+        <p style="color: var(--color-muted);"><em>No TODO.md in the vault.</em></p>
+      )}
+    </section>
+  </article>
+</Base>
+
+<style>
+  .today-section {
+    margin-top: 1.25rem;
+  }
+  .today-memo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+  }
+  .today-memo-list > li {
+    border: 1px solid var(--color-border-light);
+    background: #fff;
+    padding: 0.55rem 0.75rem;
+    margin-bottom: 0.55rem;
+    border-radius: 2px;
+  }
+  .today-memo-title {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+    color: var(--color-text);
+  }
+  .today-memo-preview {
+    font-family: var(--font-serif);
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .today-memo-preview p {
+    margin: 0.15rem 0;
+  }
+  .today-daily :global(h2),
+  .today-todos :global(h2) {
+    font-size: 1.15rem;
+  }
+</style>

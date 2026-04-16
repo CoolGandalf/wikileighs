@@ -388,6 +388,243 @@ export function pluralizeType(type: string): string {
   return h + 's';
 }
 
+// --- Gap analysis helpers ---------------------------------------------------
+
+const STUB_BODY_LINE_THRESHOLD = 40;
+const STUB_WORD_COUNT_THRESHOLD = 80;
+const STUB_EXEMPT_TYPES = new Set(['map', 'index', 'commonplace-book']);
+
+function nonEmptyBodyLines(bodyMd: string): number {
+  return bodyMd
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !/^---+$/.test(l))
+    .length;
+}
+
+export function isStub(article: Article): boolean {
+  if (STUB_EXEMPT_TYPES.has(article.type)) return false;
+  const lines = nonEmptyBodyLines(article.bodyMd);
+  return lines < STUB_BODY_LINE_THRESHOLD || article.wordCount < STUB_WORD_COUNT_THRESHOLD;
+}
+
+export function getInboundLinkCount(slug: string): number {
+  let n = 0;
+  for (const a of loadAllArticles()) {
+    if (a.slug === slug) continue;
+    if (a.outbound.includes(slug)) n++;
+  }
+  return n;
+}
+
+export function getStubs(limit = 30): Array<Article & { inboundCount: number }> {
+  const all = loadAllArticles();
+  const stubs = all.filter(isStub);
+  const inbound = new Map<string, number>();
+  for (const a of all) {
+    for (const out of a.outbound) {
+      if (out === a.slug) continue;
+      inbound.set(out, (inbound.get(out) || 0) + 1);
+    }
+  }
+  return stubs
+    .map((a) => ({ ...a, inboundCount: inbound.get(a.slug) || 0 }))
+    .sort((a, b) => b.inboundCount - a.inboundCount || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
+export function getOrphans(limit = 30): Article[] {
+  const all = loadAllArticles();
+  const referenced = new Set<string>();
+  for (const a of all) {
+    for (const out of a.outbound) referenced.add(out);
+  }
+  return all
+    .filter((a) => !referenced.has(a.slug))
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
+const BROKEN_TEMPLATE_ARTIFACTS = new Set<string>([
+  '{t}',
+  '{target}',
+  'entity name',
+  'topic-name',
+  'wikilink',
+  'related page 1',
+  'related page 2',
+  'linked entity 1',
+  'linked entity 2',
+]);
+
+export function getBrokenWikilinks(
+  limit = 30,
+): Array<{ target: string; sourceCount: number; sources: string[] }> {
+  const cache = getCache();
+  const broken = new Map<string, { target: string; sources: Set<string> }>();
+  for (const a of cache.articles) {
+    const links = extractWikilinks(a.bodyMd);
+    for (const l of links) {
+      const target = l.target;
+      if (!target) continue;
+      const lowered = target.toLowerCase().trim();
+      if (BROKEN_TEMPLATE_ARTIFACTS.has(lowered)) continue;
+      if (cache.byTitle.has(normalizeTitle(target))) continue;
+      const key = target.trim();
+      if (!broken.has(key)) broken.set(key, { target: key, sources: new Set() });
+      broken.get(key)!.sources.add(a.slug);
+    }
+  }
+  return Array.from(broken.values())
+    .map((b) => ({ target: b.target, sourceCount: b.sources.size, sources: Array.from(b.sources) }))
+    .sort((a, b) => b.sourceCount - a.sourceCount || a.target.localeCompare(b.target))
+    .slice(0, limit);
+}
+
+export function getStaleActiveProjects(daysStale = 14, now: Date = new Date()): Article[] {
+  const cutoff = new Date(now.getTime() - daysStale * 24 * 60 * 60 * 1000);
+  return loadAllArticles()
+    .filter((a) => a.type === 'project')
+    .filter((a) => (a.status || '').toLowerCase() === 'active')
+    .filter((a) => {
+      if (!a.updated) return true;
+      const d = new Date(a.updated);
+      if (isNaN(d.getTime())) return false;
+      return d < cutoff;
+    })
+    .sort((a, b) => (a.updated || '').localeCompare(b.updated || ''));
+}
+
+// --- Time-series loaders (journal/daily and journal/personal) ---------------
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function formatYMDCompact(d: Date): string {
+  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+}
+
+function formatYMDDashed(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function renderMarkdownStandalone(md: string): string {
+  const marked = new Marked({ gfm: true, breaks: false });
+  marked.use(gfmHeadingId());
+  // Render bare wikilinks as plain text since these files live outside the article graph.
+  const replaced = md.replace(/\[\[([^\]]+)\]\]/g, (_, inner) => {
+    const [targetPart, alias] = String(inner).split('|');
+    const label = (alias || targetPart.split('#')[0] || '').trim();
+    const target = targetPart.split('#')[0].trim();
+    const resolved = getCache().byTitle.get(normalizeTitle(target));
+    if (resolved) {
+      return `<a class="wikilink" href="/wiki/${resolved.slug}">${escapeHtml(label)}</a>`;
+    }
+    return `<a class="wikilink wikilink-broken" href="/missing?title=${encodeURIComponent(target)}" title="Page does not exist">${escapeHtml(label)}</a>`;
+  });
+  return marked.parse(replaced) as string;
+}
+
+function loadStandaloneMdFile(absPath: string, relPath: string): Article | null {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(absPath, 'utf8');
+  } catch {
+    return null;
+  }
+  const parsed = matter(raw);
+  const fm = parsed.data as Record<string, unknown>;
+  let bodyMd = parsed.content;
+  const baseName = path.basename(absPath, '.md');
+  const titleFromFm = coerceString(fm.title);
+  const effectiveTitle = titleFromFm || baseName;
+  const h1Re = /^\s*#\s+(.+?)\s*$/m;
+  const h1Match = h1Re.exec(bodyMd);
+  if (h1Match && normalizeTitle(h1Match[1]) === normalizeTitle(effectiveTitle)) {
+    bodyMd = bodyMd.replace(h1Re, '').replace(/^\s*\n+/, '');
+  }
+  const slug = slugify(baseName);
+  const article: Article = {
+    slug,
+    title: titleFromFm || baseName,
+    type: (coerceString(fm.type) || 'journal').toLowerCase(),
+    tags: asStringArray(fm.tags),
+    status: coerceString(fm.status),
+    created: coerceString(fm.created),
+    updated: coerceString(fm.updated),
+    source: coerceString(fm.source),
+    related: asStringArray(fm.related).map((w) => w.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0].trim()),
+    aliases: asStringArray(fm.aliases),
+    infobox: buildInfobox(fm),
+    bodyMd,
+    html: renderMarkdownStandalone(bodyMd),
+    toc: extractTocFromMd(bodyMd, slugify),
+    outbound: [],
+    relPath,
+    wordCount: countWords(bodyMd),
+    hasImage: detectImage(bodyMd),
+    firstParagraph: extractFirstParagraph(bodyMd),
+  };
+  return article;
+}
+
+export function getDailyNote(date: Date): Article | null {
+  const stamp = formatYMDCompact(date);
+  const abs = path.join(VAULT_ROOT!, 'journal', 'daily', `${stamp}.md`);
+  if (!fs.existsSync(abs)) return null;
+  return loadStandaloneMdFile(abs, `journal/daily/${stamp}.md`);
+}
+
+export function getVoiceMemosForDate(date: Date): Article[] {
+  const stamp = formatYMDDashed(date);
+  const dir = path.join(VAULT_ROOT!, 'journal', 'personal');
+  if (!fs.existsSync(dir)) return [];
+  const files = fg.sync([`${stamp}*.md`], { cwd: dir, onlyFiles: true, absolute: true });
+  const out: Article[] = [];
+  for (const abs of files) {
+    const rel = `journal/personal/${path.basename(abs)}`;
+    const a = loadStandaloneMdFile(abs, rel);
+    if (a) out.push(a);
+  }
+  out.sort((a, b) => a.slug.localeCompare(b.slug));
+  return out;
+}
+
+export function getCleanTranscriptPreview(bodyMd: string, maxLines = 5): string[] {
+  const lines = bodyMd.split('\n');
+  let i = 0;
+  // Look for "Clean Transcript" heading; fallback to first content lines.
+  const cleanIdx = lines.findIndex((l) => /^##+\s*clean\s*transcript/i.test(l.trim()));
+  if (cleanIdx >= 0) i = cleanIdx + 1;
+  const out: string[] = [];
+  for (; i < lines.length && out.length < maxLines; i++) {
+    const t = lines[i].trim();
+    if (!t) continue;
+    if (/^#{1,6}\s/.test(t)) {
+      if (out.length > 0) break;
+      continue;
+    }
+    out.push(t);
+  }
+  return out;
+}
+
+export function getTodos(): string {
+  const abs = path.join(NOTES_ROOT, 'TODO.md');
+  if (!fs.existsSync(abs)) return '';
+  try {
+    const raw = fs.readFileSync(abs, 'utf8');
+    const parsed = matter(raw);
+    let body = parsed.content;
+    const h1Re = /^\s*#\s+TODO\s*$/im;
+    body = body.replace(h1Re, '').replace(/^\s*\n+/, '');
+    return renderMarkdownStandalone(body);
+  } catch {
+    return '';
+  }
+}
+
 export function formatInfoboxValue(v: unknown): string {
   if (v == null) return '';
   if (v instanceof Date) return v.toISOString().slice(0, 10);

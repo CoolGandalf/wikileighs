@@ -1,0 +1,146 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  getStubs,
+  getOrphans,
+  getBrokenWikilinks,
+  getStaleActiveProjects,
+  humanizeType,
+} from '../lib/vault';
+
+const stubs = getStubs(30);
+const orphans = getOrphans(30);
+const broken = getBrokenWikilinks(30);
+const stale = getStaleActiveProjects(14).slice(0, 30);
+---
+<Base title="Content gaps" description="Stubs, orphans, broken links, and stale projects in WikiLeighs.">
+  <div class="breadcrumb"><a href="/">Main page</a> · Gaps</div>
+  <article class="article-body">
+    <h1>Content gaps</h1>
+    <p>
+      A dashboard of what's missing, thin, or disconnected in the vault. Surfaces work for the
+      Librarian. All counts are computed at build time.
+    </p>
+
+    <h2 id="stubs">Stubs <span style="color: var(--color-muted); font-size: 0.85em; font-weight: 400;">({stubs.length})</span></h2>
+    <p style="color: var(--color-muted); font-size: 0.9em;">
+      Articles with fewer than 40 non-empty body lines or fewer than 80 words. Sorted by
+      inbound link count — the most-linked stubs are the most urgent to fill.
+    </p>
+    {stubs.length === 0 ? (
+      <p><em>No stubs. Vault is looking complete.</em></p>
+    ) : (
+      <table class="gaps-table">
+        <thead>
+          <tr><th>Article</th><th>Type</th><th style="text-align: right;">Inbound links</th></tr>
+        </thead>
+        <tbody>
+          {stubs.map(s => (
+            <tr>
+              <td><a href={`/wiki/${s.slug}`}>{s.title}</a></td>
+              <td>{humanizeType(s.type)}</td>
+              <td style="text-align: right;">{s.inboundCount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+
+    <h2 id="orphans">Orphans <span style="color: var(--color-muted); font-size: 0.85em; font-weight: 400;">({orphans.length})</span></h2>
+    <p style="color: var(--color-muted); font-size: 0.9em;">
+      Articles with zero inbound wikilinks across the vault. Either underlinked or truly standalone.
+    </p>
+    {orphans.length === 0 ? (
+      <p><em>No orphans.</em></p>
+    ) : (
+      <table class="gaps-table">
+        <thead>
+          <tr><th>Article</th><th>Type</th></tr>
+        </thead>
+        <tbody>
+          {orphans.map(o => (
+            <tr>
+              <td><a href={`/wiki/${o.slug}`}>{o.title}</a></td>
+              <td>{humanizeType(o.type)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+
+    <h2 id="broken">Broken wikilinks <span style="color: var(--color-muted); font-size: 0.85em; font-weight: 400;">({broken.length})</span></h2>
+    <p style="color: var(--color-muted); font-size: 0.9em;">
+      <code>[[Target]]</code> references where no article exists with that title or alias. Top 30 by
+      inbound pressure.
+    </p>
+    {broken.length === 0 ? (
+      <p><em>No broken wikilinks.</em></p>
+    ) : (
+      <table class="gaps-table">
+        <thead>
+          <tr><th>Missing target</th><th style="text-align: right;">Source articles</th></tr>
+        </thead>
+        <tbody>
+          {broken.map(b => (
+            <tr>
+              <td><a href={`/missing?title=${encodeURIComponent(b.target)}`} class="wikilink-broken" style="color: var(--color-link-broken);">{b.target}</a></td>
+              <td style="text-align: right;">{b.sourceCount}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+
+    <h2 id="stale">Stale active projects <span style="color: var(--color-muted); font-size: 0.85em; font-weight: 400;">({stale.length})</span></h2>
+    <p style="color: var(--color-muted); font-size: 0.9em;">
+      Projects marked <code>status: active</code> whose <code>updated:</code> date is more than 14 days old.
+    </p>
+    {stale.length === 0 ? (
+      <p><em>No stale active projects. Everything is moving.</em></p>
+    ) : (
+      <table class="gaps-table">
+        <thead>
+          <tr><th>Project</th><th>Updated</th></tr>
+        </thead>
+        <tbody>
+          {stale.map(p => (
+            <tr>
+              <td><a href={`/wiki/${p.slug}`}>{p.title}</a></td>
+              <td style="color: var(--color-muted);">{p.updated || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </article>
+</Base>
+
+<style>
+  .gaps-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.6rem 0 1.4rem;
+    font-size: 0.92rem;
+    font-family: var(--font-sans);
+    background: #fff;
+  }
+  .gaps-table th,
+  .gaps-table td {
+    border-bottom: 1px solid var(--color-border-light);
+    padding: 0.32rem 0.55rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .gaps-table th {
+    background: var(--color-rail);
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .gaps-table a {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+  .gaps-table a:hover {
+    text-decoration: underline;
+  }
+</style>

@@ -1,0 +1,63 @@
+---
+import type { Article } from '../lib/vault';
+import { isStub } from '../lib/vault';
+
+interface Props {
+  article: Article;
+}
+
+const { article } = Astro.props;
+const show = isStub(article);
+---
+{show && (
+  <aside class="stub-banner" role="note" aria-label="Stub notice">
+    <span class="stub-banner-icon" aria-hidden="true">📝</span>
+    <div class="stub-banner-text">
+      <strong>This article is a stub.</strong> You can help the wiki by writing more.
+      <a href="/gaps" class="stub-banner-link">(Add this page to the Librarian queue)</a>
+    </div>
+  </aside>
+)}
+
+<style>
+  .stub-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    background: #fef6e4;
+    border: 1px solid #e6c878;
+    border-left: 4px solid #c89b3c;
+    padding: 0.55rem 0.75rem;
+    margin: 0.6rem 0 0.9rem;
+    font-family: var(--font-sans);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #5a4012;
+    border-radius: 2px;
+  }
+
+  .stub-banner-icon {
+    font-size: 1rem;
+    line-height: 1.35;
+    flex-shrink: 0;
+  }
+
+  .stub-banner-text {
+    flex: 1;
+  }
+
+  .stub-banner-text strong {
+    font-weight: 700;
+  }
+
+  .stub-banner-link {
+    color: var(--color-link);
+    text-decoration: none;
+    margin-left: 0.35rem;
+    font-size: 0.83rem;
+  }
+
+  .stub-banner-link:hover {
+    text-decoration: underline;
+  }
+</style>

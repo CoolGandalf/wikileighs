@@ -1,16 +1,31 @@
 ---
-import { getTypeCounts, getArticlesByType, humanizeType, pluralizeType } from '../lib/vault';
+import {
+  getTypeCounts,
+  getArticlesByType,
+  humanizeType,
+  pluralizeType,
+  getStubs,
+  getOrphans,
+  getBrokenWikilinks,
+} from '../lib/vault';
 
 interface Props { activeType?: string }
 const { activeType } = Astro.props;
 const typeCounts = getTypeCounts();
 const featuredTypes = typeCounts.slice(0, 4);
 const spotlightArticles = featuredTypes.flatMap(tc => getArticlesByType(tc.type).slice(0, 5));
+
+// Gap counters — compute the totals, not the capped top-N, for the footer summary.
+const stubCount = getStubs(10_000).length;
+const orphanCount = getOrphans(10_000).length;
+const brokenCount = getBrokenWikilinks(10_000).length;
 ---
 <nav class="rail" aria-label="Navigation">
   <div class="rail-heading">Navigation</div>
   <ul>
     <li><a href="/">Main page</a></li>
+    <li><a href="/today">Today</a></li>
+    <li><a href="/gaps">Content gaps</a></li>
     <li><a href="/random">Random article</a></li>
     <li><a href="/about">About WikiLeighs</a></li>
   </ul>
@@ -32,4 +47,22 @@ const spotlightArticles = featuredTypes.flatMap(tc => getArticlesByType(tc.type)
       <li><a href={`/wiki/${a.slug}`}>{a.title}</a></li>
     ))}
   </ul>
+
+  <div class="rail-footer">
+    <a href="/gaps" style="color: var(--color-muted); text-decoration: none;">
+      Stubs: {stubCount} · Orphans: {orphanCount} · Broken links: {brokenCount}
+    </a>
+  </div>
 </nav>
+
+<style>
+  .rail-footer {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-border-light);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+  .rail-footer a:hover { text-decoration: underline; }
+</style>

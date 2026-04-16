@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import StubBanner from '../../components/StubBanner.astro';
 import {
   loadAllArticles,
   getArticleBySlug,
@@ -73,6 +74,8 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
 
   <article class="article-body">
     <h1>{article.title}</h1>
+
+    <StubBanner article={article} />
 
     {(infoboxPairs.length > 0 || isPerson) && (
       <aside class="infobox" aria-label="Infobox">
