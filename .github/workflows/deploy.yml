@@ -1,0 +1,72 @@
+name: Build and deploy WikiLeighs
+
+# Triggers:
+# - push to main: any code change to wikileighs rebuilds + deploys
+# - workflow_dispatch: manual rebuild (UI or CLI)
+# - repository_dispatch of type "vault-changed": fired by a companion workflow in the
+#   leigh-wiki repo after every vault push — so vault writes auto-rebuild the site
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [vault-changed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout wikileighs
+        uses: actions/checkout@v4
+        with:
+          path: wikileighs
+
+      - name: Checkout leigh-wiki (private vault)
+        uses: actions/checkout@v4
+        with:
+          repository: CoolGandalf/leigh-wiki
+          token: ${{ secrets.VAULT_READ_TOKEN }}
+          path: vault
+          # Shallow clone — build reads files, doesn't need history
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: wikileighs/package-lock.json
+
+      - name: Install dependencies
+        working-directory: wikileighs
+        run: npm ci
+
+      - name: Build site
+        working-directory: wikileighs
+        env:
+          VAULT_ROOT: ${{ github.workspace }}/vault
+        run: npm run build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: wikileighs/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

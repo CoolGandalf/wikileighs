@@ -322,9 +322,9 @@ function getCache() {
       if (resolved) {
         outbound.add(resolved.slug);
         const anchor = heading ? `#${slugify(heading)}` : '';
-        return `<a class="wikilink" href="/wiki/${resolved.slug}${anchor}">${escapeHtml(label)}</a>`;
+        return `<a class="wikilink" href="${import.meta.env.BASE_URL}wiki/${resolved.slug}${anchor}">${escapeHtml(label)}</a>`;
       }
-      return `<a class="wikilink wikilink-broken" href="/missing?title=${encodeURIComponent(target.trim())}" title="Page does not exist">${escapeHtml(label)}</a>`;
+      return `<a class="wikilink wikilink-broken" href="${import.meta.env.BASE_URL}missing?title=${encodeURIComponent(target.trim())}" title="Page does not exist">${escapeHtml(label)}</a>`;
     });
 
     const marked = new Marked({ gfm: true, breaks: false });
@@ -617,9 +617,9 @@ function renderMarkdownStandalone(md: string): string {
     const target = targetPart.split('#')[0].trim();
     const resolved = getCache().byTitle.get(normalizeTitle(target));
     if (resolved) {
-      return `<a class="wikilink" href="/wiki/${resolved.slug}">${escapeHtml(label)}</a>`;
+      return `<a class="wikilink" href="${import.meta.env.BASE_URL}wiki/${resolved.slug}">${escapeHtml(label)}</a>`;
     }
-    return `<a class="wikilink wikilink-broken" href="/missing?title=${encodeURIComponent(target)}" title="Page does not exist">${escapeHtml(label)}</a>`;
+    return `<a class="wikilink wikilink-broken" href="${import.meta.env.BASE_URL}missing?title=${encodeURIComponent(target)}" title="Page does not exist">${escapeHtml(label)}</a>`;
   });
   return marked.parse(replaced) as string;
 }

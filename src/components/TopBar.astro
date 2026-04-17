@@ -1,9 +1,10 @@
 ---
 import { getSearchIndex } from '../lib/vault';
 const searchIndex = getSearchIndex();
+const BASE_URL = import.meta.env.BASE_URL;
 ---
 <header class="topbar">
-  <a href="/" class="topbar-brand" style="color: inherit; text-decoration: none;">
+  <a href={BASE_URL} class="topbar-brand" style="color: inherit; text-decoration: none;">
     <span class="logo">L</span>
     <span class="topbar-wordmark">
       <span class="title">WIKILEIGHS</span>
@@ -21,12 +22,12 @@ const searchIndex = getSearchIndex();
     <div class="search-results" id="search-results" role="listbox"></div>
   </form>
   <nav class="topbar-actions">
-    <a class="btn" href="/random">Random</a>
-    <a class="btn" href="/about">About</a>
+    <a class="btn" href={`${BASE_URL}random`}>Random</a>
+    <a class="btn" href={`${BASE_URL}about`}>About</a>
   </nav>
 </header>
 
-<script is:inline define:vars={{ searchIndex }}>
+<script is:inline define:vars={{ searchIndex, BASE_URL }}>
   window.__wikileighsIndex = searchIndex;
 
   const input = document.getElementById('search-input');
@@ -54,7 +55,7 @@ const searchIndex = getSearchIndex();
   function render() {
     if (!matches.length) { box.classList.remove('open'); box.innerHTML = ''; return; }
     box.innerHTML = matches.map((m, i) => `
-      <a data-idx="${i}" class="${i === activeIdx ? 'active' : ''}" href="/wiki/${m.slug}">
+      <a data-idx="${i}" class="${i === activeIdx ? 'active' : ''}" href="${BASE_URL}wiki/${m.slug}">
         <div class="title">${escape(m.title)}</div>
         <div class="meta">${escape(m.type)}${m.excerpt ? ' · ' + escape(m.excerpt.slice(0, 70)) : ''}</div>
       </a>
@@ -87,7 +88,7 @@ const searchIndex = getSearchIndex();
     else if (e.key === 'Enter') {
       if (matches[activeIdx]) {
         e.preventDefault();
-        window.location.href = '/wiki/' + matches[activeIdx].slug;
+        window.location.href = BASE_URL + 'wiki/' + matches[activeIdx].slug;
       }
     }
     else if (e.key === 'Escape') { input.value = ''; matches = []; activeIdx = -1; render(); }
@@ -99,8 +100,8 @@ const searchIndex = getSearchIndex();
 
   window.__wikileighsSearchSubmit = function(ev) {
     ev.preventDefault();
-    if (matches[activeIdx]) window.location.href = '/wiki/' + matches[activeIdx].slug;
-    else if (matches[0]) window.location.href = '/wiki/' + matches[0].slug;
+    if (matches[activeIdx]) window.location.href = BASE_URL + 'wiki/' + matches[activeIdx].slug;
+    else if (matches[0]) window.location.href = BASE_URL + 'wiki/' + matches[0].slug;
     return false;
   };
 </script>

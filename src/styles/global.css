@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Suggest-edit tab button on article pages (mailto → [cc:Mac]) */
+.tabs .suggest-edit {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 0.85em;
+  text-decoration: none;
+  opacity: 0.65;
+}
+.tabs .suggest-edit:hover { opacity: 1; text-decoration: underline; }
+
 :root {
   --color-text: #202122;
   --color-muted: #54595d;

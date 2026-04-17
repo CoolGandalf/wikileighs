@@ -19,13 +19,20 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 const article = getArticleBySlug(slug!);
+const BASE_URL = import.meta.env.BASE_URL;
 if (!article) {
-  return Astro.redirect('/missing?title=' + encodeURIComponent(slug || ''));
+  return Astro.redirect(`${BASE_URL}missing?title=` + encodeURIComponent(slug || ''));
 }
 
 const infoboxPairs = getInfoboxAsPairs(article);
 const incoming = getIncomingLinks(article.slug).slice(0, 12);
 const isPerson = article.type === 'person';
+
+const editSubject = encodeURIComponent(`[cc:Mac] WikiLeighs edit: ${article.title}`);
+const editBody = encodeURIComponent(
+  `Page: ${article.title}\nSlug: ${article.slug}\nSource: notes/${article.relPath || ''}\n\nSuggested change:\n\n(describe what you'd like updated)\n\n— Sent from WikiLeighs`
+);
+const editMailto = `mailto:leigh.llewelyn@gmail.com?subject=${editSubject}&body=${editBody}`;
 
 function initialsFor(title: string) {
   const parts = title.split(/\s+/).filter(Boolean);
@@ -41,7 +48,7 @@ function renderInfoboxValue(key: string, raw: string): string {
     return raw.split(/,\s*/).map(t => {
       const cleaned = t.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0].trim();
       const res = resolveWikilink(cleaned);
-      if (res) return `<a href="/wiki/${res.slug}">${escapeHtml(cleaned)}</a>`;
+      if (res) return `<a href="${import.meta.env.BASE_URL}wiki/${res.slug}">${escapeHtml(cleaned)}</a>`;
       return `<span class="wikilink-broken" style="color: var(--color-link-broken);">${escapeHtml(cleaned)}</span>`;
     }).join(', ');
   }
@@ -56,7 +63,7 @@ function escapeHtml(s: string): string {
 }
 
 const breadcrumbBits: string[] = [];
-breadcrumbBits.push(`<a href="/category/${article.type}">${humanizeType(article.type)}</a>`);
+breadcrumbBits.push(`<a href="${BASE_URL}category/${article.type}">${humanizeType(article.type)}</a>`);
 if (article.created) breadcrumbBits.push(`created ${article.created}`);
 if (article.updated && article.updated !== article.created) breadcrumbBits.push(`updated ${article.updated}`);
 ---
@@ -65,11 +72,12 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
     <Fragment set:html={breadcrumbBits.join(' · ')} />
   </div>
   <nav class="tabs">
-    <a class="active" href={`/wiki/${article.slug}`}>Article</a>
-    <a href={`/category/${article.type}`}>{humanizeType(article.type)}</a>
+    <a class="active" href={`${BASE_URL}wiki/${article.slug}`}>Article</a>
+    <a href={`${BASE_URL}category/${article.type}`}>{humanizeType(article.type)}</a>
     {article.tags.slice(0, 4).map(t => (
-      <a href={`/tag/${slugify(t)}`}>#{t}</a>
+      <a href={`${BASE_URL}tag/${slugify(t)}`}>#{t}</a>
     ))}
+    <a class="suggest-edit" href={editMailto} title="Email Leigh a suggested change for this page">✎ Suggest edit</a>
   </nav>
 
   <article class="article-body">
@@ -129,7 +137,7 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
     <section style="margin-top: 1.5rem; border-top: 1px solid var(--color-border-light); padding-top: 0.7rem;">
       <h2 style="font-family: var(--font-serif); font-weight: 400; font-size: 1.15rem; margin-bottom: 0.4rem;">What links here</h2>
       <ul style="list-style: disc; margin-left: 1.35rem; font-size: 0.9rem; columns: 2; column-gap: 1.5rem;">
-        {incoming.map(i => <li style="break-inside: avoid;"><a href={`/wiki/${i.slug}`} style="color: var(--color-link); text-decoration: none;">{i.title}</a> <span style="color: var(--color-muted); font-style: italic;">— {humanizeType(i.type)}</span></li>)}
+        {incoming.map(i => <li style="break-inside: avoid;"><a href={`${BASE_URL}wiki/${i.slug}`} style="color: var(--color-link); text-decoration: none;">{i.title}</a> <span style="color: var(--color-muted); font-style: italic;">— {humanizeType(i.type)}</span></li>)}
       </ul>
     </section>
   )}

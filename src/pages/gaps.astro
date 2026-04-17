@@ -12,9 +12,10 @@ const stubs = getStubs(30);
 const orphans = getOrphans(30);
 const broken = getBrokenWikilinks(30);
 const stale = getStaleActiveProjects(14).slice(0, 30);
+const BASE_URL = import.meta.env.BASE_URL;
 ---
 <Base title="Content gaps" description="Stubs, orphans, broken links, and stale projects in WikiLeighs.">
-  <div class="breadcrumb"><a href="/">Main page</a> · Gaps</div>
+  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Gaps</div>
   <article class="article-body">
     <h1>Content gaps</h1>
     <p>
@@ -37,7 +38,7 @@ const stale = getStaleActiveProjects(14).slice(0, 30);
         <tbody>
           {stubs.map(s => (
             <tr>
-              <td><a href={`/wiki/${s.slug}`}>{s.title}</a></td>
+              <td><a href={`${BASE_URL}wiki/${s.slug}`}>{s.title}</a></td>
               <td>{humanizeType(s.type)}</td>
               <td style="text-align: right;">{s.inboundCount}</td>
             </tr>
@@ -60,7 +61,7 @@ const stale = getStaleActiveProjects(14).slice(0, 30);
         <tbody>
           {orphans.map(o => (
             <tr>
-              <td><a href={`/wiki/${o.slug}`}>{o.title}</a></td>
+              <td><a href={`${BASE_URL}wiki/${o.slug}`}>{o.title}</a></td>
               <td>{humanizeType(o.type)}</td>
             </tr>
           ))}
@@ -83,7 +84,7 @@ const stale = getStaleActiveProjects(14).slice(0, 30);
         <tbody>
           {broken.map(b => (
             <tr>
-              <td><a href={`/missing?title=${encodeURIComponent(b.target)}`} class="wikilink-broken" style="color: var(--color-link-broken);">{b.target}</a></td>
+              <td><a href={`${BASE_URL}missing?title=${encodeURIComponent(b.target)}`} class="wikilink-broken" style="color: var(--color-link-broken);">{b.target}</a></td>
               <td style="text-align: right;">{b.sourceCount}</td>
             </tr>
           ))}
@@ -105,7 +106,7 @@ const stale = getStaleActiveProjects(14).slice(0, 30);
         <tbody>
           {stale.map(p => (
             <tr>
-              <td><a href={`/wiki/${p.slug}`}>{p.title}</a></td>
+              <td><a href={`${BASE_URL}wiki/${p.slug}`}>{p.title}</a></td>
               <td style="color: var(--color-muted);">{p.updated || '—'}</td>
             </tr>
           ))}

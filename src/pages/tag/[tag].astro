@@ -21,16 +21,17 @@ const { display } = Astro.props as { display: string };
 const matches = loadAllArticles()
   .filter(a => a.tags.some(t => slugify(t) === tag))
   .sort((a, b) => a.title.localeCompare(b.title));
+const BASE_URL = import.meta.env.BASE_URL;
 ---
 <Base title={`#${display}`}>
-  <div class="breadcrumb"><a href="/">Main page</a> · Tag</div>
+  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Tag</div>
   <article class="article-body">
     <h1>Pages tagged <code>#{display}</code></h1>
     <p>{matches.length} {matches.length === 1 ? 'page' : 'pages'}.</p>
     <ul style="list-style: none; padding: 0; column-count: 2; column-gap: 2rem;">
       {matches.map(a => (
         <li style="padding: 0.15rem 0; break-inside: avoid;">
-          <a href={`/wiki/${a.slug}`}>{a.title}</a>
+          <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
           <span style="color: var(--color-muted); font-style: italic; font-size: 0.85em;"> — {humanizeType(a.type)}</span>
         </li>
       ))}

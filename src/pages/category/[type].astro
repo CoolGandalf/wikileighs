@@ -16,9 +16,10 @@ for (const a of articles) {
   groups.get(key)!.push(a);
 }
 const sortedGroups = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+const BASE_URL = import.meta.env.BASE_URL;
 ---
 <Base title={pluralizeType(type!)} activeType={type}>
-  <div class="breadcrumb"><a href="/">Main page</a> · Category</div>
+  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Category</div>
   <article class="article-body">
     <h1>Category: {pluralizeType(type!)}</h1>
     <p>
@@ -31,7 +32,7 @@ const sortedGroups = Array.from(groups.entries()).sort(([a], [b]) => a.localeCom
         <ul style="list-style: none; padding: 0; column-count: 2; column-gap: 2rem;">
           {list.map(a => (
             <li style="padding: 0.15rem 0; break-inside: avoid;">
-              <a href={`/wiki/${a.slug}`}>{a.title}</a>
+              <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
               <span style="color: var(--color-muted); font-style: italic; font-size: 0.85em;"> — {humanizeType(a.type)}</span>
             </li>
           ))}

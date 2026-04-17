@@ -8,13 +8,14 @@ interface Props {
 
 const { article } = Astro.props;
 const show = isStub(article);
+const BASE_URL = import.meta.env.BASE_URL;
 ---
 {show && (
   <aside class="stub-banner" role="note" aria-label="Stub notice">
     <span class="stub-banner-icon" aria-hidden="true">📝</span>
     <div class="stub-banner-text">
       <strong>This article is a stub.</strong> You can help the wiki by writing more.
-      <a href="/gaps" class="stub-banner-link">(Add this page to the Librarian queue)</a>
+      <a href={`${BASE_URL}gaps`} class="stub-banner-link">(Add this page to the Librarian queue)</a>
     </div>
   </aside>
 )}

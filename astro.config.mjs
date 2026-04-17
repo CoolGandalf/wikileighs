@@ -38,6 +38,9 @@ function vaultWatcher() {
 }
 
 export default defineConfig({
+  site: 'https://lgl.gg',
+  base: '/wikileighs/',
+  trailingSlash: 'ignore',
   integrations: [tailwind({ applyBaseStyles: false })],
   server: { host: '127.0.0.1', port: 4321 },
   vite: {

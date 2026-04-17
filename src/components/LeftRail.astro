@@ -14,6 +14,7 @@ const { activeType } = Astro.props;
 const typeCounts = getTypeCounts();
 const featuredTypes = typeCounts.slice(0, 4);
 const spotlightArticles = featuredTypes.flatMap(tc => getArticlesByType(tc.type).slice(0, 5));
+const BASE_URL = import.meta.env.BASE_URL;
 
 // Gap counters — compute the totals, not the capped top-N, for the footer summary.
 const stubCount = getStubs(10_000).length;
@@ -23,18 +24,18 @@ const brokenCount = getBrokenWikilinks(10_000).length;
 <nav class="rail" aria-label="Navigation">
   <div class="rail-heading">Navigation</div>
   <ul>
-    <li><a href="/">Main page</a></li>
-    <li><a href="/today">Today</a></li>
-    <li><a href="/gaps">Content gaps</a></li>
-    <li><a href="/random">Random article</a></li>
-    <li><a href="/about">About WikiLeighs</a></li>
+    <li><a href={BASE_URL}>Main page</a></li>
+    <li><a href={`${BASE_URL}today`}>Today</a></li>
+    <li><a href={`${BASE_URL}gaps`}>Content gaps</a></li>
+    <li><a href={`${BASE_URL}random`}>Random article</a></li>
+    <li><a href={`${BASE_URL}about`}>About WikiLeighs</a></li>
   </ul>
 
   <div class="rail-heading">Categories</div>
   <ul>
     {typeCounts.map(tc => (
       <li>
-        <a href={`/category/${tc.type}`} style={tc.type === activeType ? 'font-weight: 700;' : ''}>
+        <a href={`${BASE_URL}category/${tc.type}`} style={tc.type === activeType ? 'font-weight: 700;' : ''}>
           {pluralizeType(tc.type)} <span style="color: var(--color-muted)">({tc.count})</span>
         </a>
       </li>
@@ -44,12 +45,12 @@ const brokenCount = getBrokenWikilinks(10_000).length;
   <div class="rail-heading">Pages</div>
   <ul>
     {spotlightArticles.map(a => (
-      <li><a href={`/wiki/${a.slug}`}>{a.title}</a></li>
+      <li><a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a></li>
     ))}
   </ul>
 
   <div class="rail-footer">
-    <a href="/gaps" style="color: var(--color-muted); text-decoration: none;">
+    <a href={`${BASE_URL}gaps`} style="color: var(--color-muted); text-decoration: none;">
       Stubs: {stubCount} · Orphans: {orphanCount} · Broken links: {brokenCount}
     </a>
   </div>
