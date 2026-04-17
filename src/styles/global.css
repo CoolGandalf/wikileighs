@@ -190,6 +190,17 @@ body {
   object-fit: cover;
 }
 
+/* Person-article photo (when frontmatter `photo:` is set). Matches silver-circle
+   dimensions so the layout is identical whether a photo exists or not. */
+.infobox-image .person-photo {
+  width: 12rem;
+  height: 12rem;
+  border-radius: 9999px;
+  object-fit: cover;
+  aspect-ratio: 1 / 1;
+  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
 .infobox-image .silver-circle {
   display: inline-block;
   width: 12rem;
@@ -443,6 +454,48 @@ body {
   color: var(--color-muted);
   font-style: italic;
   font-size: 0.82rem;
+}
+
+/* Home - Recently updated list (prominent section under the featured block) */
+.recently-updated-block { padding-bottom: 0.85rem; }
+
+.recently-updated-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.recently-updated-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding: 0.28rem 0;
+  border-bottom: 1px dotted var(--color-border-light);
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.recently-updated-list li:last-child { border-bottom: 0; }
+
+.recently-updated-list li a {
+  color: var(--color-link);
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recently-updated-list li a:hover { text-decoration: underline; }
+
+.recently-updated-list li .tag-chip { flex-shrink: 0; margin-right: 0; }
+
+.recently-updated-list li .date {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Top bar */

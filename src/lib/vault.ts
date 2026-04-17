@@ -36,6 +36,15 @@ export interface Article {
   wordCount: number;
   hasImage: boolean;
   firstParagraph: string;
+  /**
+   * Resolved photo src for the person-article infobox. Set via frontmatter
+   * `photo:`. Absolute URLs (http/https/data:) pass through; relative paths
+   * resolve against `$VAULT_ROOT/attachments/` and are inlined as data URIs at
+   * build time. Null if unset or the file could not be read.
+   */
+  photo: string | null;
+  /** True if frontmatter `featured: true` was set (manual Featured curator). */
+  featured: boolean;
 }
 
 export interface TocEntry {
@@ -151,7 +160,55 @@ function detectImage(md: string): boolean {
   return /!\[[^\]]*\]\([^)]+\)|<img\s/i.test(md);
 }
 
+const PHOTO_MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.svg': 'image/svg+xml',
+};
+
+/**
+ * Resolve a frontmatter `photo:` value to something usable as an <img src=…>.
+ * - Absolute URLs (http, https, data:) pass through untouched.
+ * - Relative paths resolve against `$VAULT_ROOT/attachments/` and get inlined
+ *   as base64 data URIs at build time (SSG output contains no external asset
+ *   deps). Missing or unreadable files return null so the caller can fall back
+ *   to the silver-circle initials.
+ */
+function resolvePhoto(raw: unknown): string | null {
+  if (raw == null) return null;
+  const value = String(raw).trim();
+  if (!value) return null;
+  if (/^(?:https?:|data:)/i.test(value)) return value;
+  const cleaned = value.replace(/^\/+/, '').replace(/^attachments[\\/]/i, '');
+  const abs = path.join(VAULT_ROOT!, 'attachments', cleaned);
+  try {
+    const buf = fs.readFileSync(abs);
+    const ext = path.extname(abs).toLowerCase();
+    const mime = PHOTO_MIME_BY_EXT[ext] || 'application/octet-stream';
+    if (ext === '.svg') {
+      return `data:${mime};utf8,${encodeURIComponent(buf.toString('utf8'))}`;
+    }
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
+function coerceBool(val: unknown): boolean {
+  if (val === true) return true;
+  if (typeof val === 'string') return /^(true|yes|1)$/i.test(val.trim());
+  return false;
+}
+
 let CACHE: { articles: Article[]; byTitle: Map<string, Article>; bySlug: Map<string, Article> } | null = null;
+
+export function clearCache() {
+  CACHE = null;
+}
 
 export function loadAllArticles(): Article[] {
   return getCache().articles;
@@ -241,6 +298,8 @@ function getCache() {
       wordCount: countWords(bodyMd),
       hasImage: detectImage(bodyMd),
       firstParagraph,
+      photo: resolvePhoto(fm.photo),
+      featured: coerceBool(fm.featured),
     };
 
     articles.push(article);
@@ -291,7 +350,9 @@ function inferType(relPath: string): string {
 }
 
 function buildInfobox(fm: Record<string, unknown>): Record<string, unknown> {
-  const hidden = new Set(['title', 'body']);
+  // `photo` is rendered as the infobox hero image; `featured` is a curator flag
+  // consumed by getFeaturedArticle — neither belongs as a visible table row.
+  const hidden = new Set(['title', 'body', 'photo', 'featured']);
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(fm)) {
     if (hidden.has(k)) continue;
@@ -331,8 +392,45 @@ export function getRecentArticles(n = 8): Article[] {
     .slice(0, n);
 }
 
+/**
+ * Top-N articles by `updated:` date, excluding meta/index types that aren't
+ * meaningful as "activity" signals (map, index, log). Used by the homepage
+ * Recently-updated feed.
+ */
+const RECENT_EXCLUDED_TYPES = new Set(['map', 'index', 'log']);
+
+export function getRecentlyUpdated(n = 8): Article[] {
+  return loadAllArticles()
+    .filter((a) => a.updated && !RECENT_EXCLUDED_TYPES.has(a.type))
+    .sort((a, b) => (b.updated || '').localeCompare(a.updated || ''))
+    .slice(0, n);
+}
+
+/**
+ * Pick the Featured article for the home page.
+ *
+ * Resolution order:
+ *   1. Any article with frontmatter `featured: true` — if multiple are flagged,
+ *      the one with the most recent `updated:` wins (falls back to `created:`,
+ *      then title).
+ *   2. Otherwise, the longest non-report article with wordCount > 400.
+ *
+ * Flip curation by editing the note: add `featured: true` in the YAML
+ * frontmatter. Remove or set `false` to return to the automatic pick.
+ */
 export function getFeaturedArticle(): Article | undefined {
-  const pool = loadAllArticles().filter((a) => a.wordCount > 400 && !a.relPath.startsWith('_') && a.type !== 'report');
+  const all = loadAllArticles();
+  const manual = all.filter((a) => a.featured && !a.relPath.startsWith('_'));
+  if (manual.length) {
+    manual.sort((a, b) => {
+      const bu = b.updated || b.created || '';
+      const au = a.updated || a.created || '';
+      if (bu !== au) return bu.localeCompare(au);
+      return a.title.localeCompare(b.title);
+    });
+    return manual[0];
+  }
+  const pool = all.filter((a) => a.wordCount > 400 && !a.relPath.startsWith('_') && a.type !== 'report');
   pool.sort((a, b) => b.wordCount - a.wordCount);
   return pool[0];
 }

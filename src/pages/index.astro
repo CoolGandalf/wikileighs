@@ -4,6 +4,7 @@ import {
   loadAllArticles,
   getTypeCounts,
   getRecentArticles,
+  getRecentlyUpdated,
   getFeaturedArticle,
   getArticlesByType,
   humanizeType,
@@ -13,6 +14,7 @@ import {
 const all = loadAllArticles();
 const typeCounts = getTypeCounts();
 const recent = getRecentArticles(8);
+const recentlyUpdated = getRecentlyUpdated(8);
 const featured = getFeaturedArticle();
 
 const categoriesForBrowse = typeCounts
@@ -48,6 +50,21 @@ const categoriesForBrowse = typeCounts
         </section>
       )}
 
+      {recentlyUpdated.length > 0 && (
+        <section class="browse-block recently-updated-block">
+          <h2 class="browse-title">Recently updated</h2>
+          <ul class="recently-updated-list">
+            {recentlyUpdated.map(a => (
+              <li>
+                <a href={`/wiki/${a.slug}`}>{a.title}</a>
+                <span class="tag-chip">{humanizeType(a.type)}</span>
+                <span class="date">{a.updated}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section class="browse-block">
         <h2 class="browse-title">Browse by category</h2>
         <div class="browse-grid">
@@ -73,7 +90,7 @@ const categoriesForBrowse = typeCounts
 
     <div>
       <section class="card">
-        <div class="card-header">Recently updated</div>
+        <div class="card-header">Latest activity</div>
         <div class="card-body">
           <ul>
             {recent.map(a => (

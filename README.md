@@ -17,10 +17,27 @@ No database, no CMS, no build step at read time — everything is computed at As
 
 ## Install & run
 
+WikiLeighs reads your vault via the `VAULT_ROOT` env var — it has no default, so you must point it at the vault before running anything.
+
 ```
 npm install
-npm run dev      # http://127.0.0.1:4321/
+VAULT_ROOT=~/Projects/vault npx astro dev      # http://127.0.0.1:4321/
 ```
+
+Static build:
+
+```
+VAULT_ROOT=~/Projects/vault npx astro build
+```
+
+On Windows PowerShell:
+
+```
+$env:VAULT_ROOT = "C:/Users/you/Documents/your-vault"
+npx astro dev
+```
+
+See `.env.example` for details.
 
 ## How it maps vault → wiki
 
@@ -40,10 +57,12 @@ npm run dev      # http://127.0.0.1:4321/
 
 ## Vault path
 
-Configured in `src/lib/vault.ts` as `VAULT_ROOT = 'C:/Users/leigh/Documents/leigh-vault'`. Change that one constant if the vault moves.
+Set `VAULT_ROOT` in the environment. `src/lib/vault.ts` reads it at startup and throws if it's unset — there is no default. Keep the path in a shell profile, `direnv`, or a `.env` file (see `.env.example`).
 
 Excluded subtrees (by design — this is a reader for the wiki, not journal or inbox):
 - `Private/`, `_local-*/`, `archive/`, `inbox/`, `journal/`, `attachments/`
+
+Relative `photo:` values on person notes resolve against `$VAULT_ROOT/attachments/` and are inlined as base64 data URIs at build time.
 
 ## Project layout
 
@@ -73,7 +92,7 @@ tsconfig.json
 - **Serif body type** (`Linux Libertine` / `Georgia`) for article content — Wikipedia feel.
 - **Sans-serif chrome** (`-apple-system` / `Segoe UI`) for navigation, search, infobox.
 - **Purple accent** on Featured article header (Farzapedia-style).
-- **Silver-circle initials** for person articles without a `photo:` frontmatter field.
+- **Person photos** render from the `photo:` frontmatter field (relative path → `$VAULT_ROOT/attachments/…`, absolute URL passes through). Falls back to silver-circle initials if unset or the file can't be read.
 - Links: blue for resolvable, visited purple, broken wikilinks red.
 
 ## STATUS.md

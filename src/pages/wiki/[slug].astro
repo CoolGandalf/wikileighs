@@ -82,7 +82,18 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
         <div class="infobox-header">{article.title}</div>
         {isPerson && (
           <div class="infobox-image">
-            <span class="silver-circle">{initialsFor(article.title)}</span>
+            {article.photo ? (
+              <img
+                src={article.photo}
+                alt={article.title}
+                loading="lazy"
+                class="rounded-full object-cover aspect-square person-photo"
+                onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'silver-circle',textContent:this.dataset.initials}))"
+                data-initials={initialsFor(article.title)}
+              />
+            ) : (
+              <span class="silver-circle">{initialsFor(article.title)}</span>
+            )}
           </div>
         )}
         {infoboxPairs.length > 0 && (
