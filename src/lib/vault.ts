@@ -345,6 +345,7 @@ function escapeHtml(s: string): string {
 
 function inferType(relPath: string): string {
   if (relPath.startsWith('people/')) return 'person';
+  if (relPath.startsWith('canon/')) return 'canon';
   if (relPath.startsWith('projects/')) return 'project';
   return 'reference';
 }
@@ -474,6 +475,7 @@ export function pluralizeType(type: string): string {
   const overrides: Record<string, string> = {
     person: 'People',
     people: 'People',
+    canon: 'Canon',
     research: 'Research',
     index: 'Indexes',
     bookshelf: 'Bookshelves',

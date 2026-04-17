@@ -26,7 +26,7 @@ if (!article) {
 
 const infoboxPairs = getInfoboxAsPairs(article);
 const incoming = getIncomingLinks(article.slug).slice(0, 12);
-const isPerson = article.type === 'person';
+const hasPortraitInfobox = article.type === 'person' || article.type === 'canon';
 
 const editSubject = encodeURIComponent(`[cc:Mac] WikiLeighs edit: ${article.title}`);
 const editBody = encodeURIComponent(
@@ -85,10 +85,10 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
 
     <StubBanner article={article} />
 
-    {(infoboxPairs.length > 0 || isPerson) && (
+    {(infoboxPairs.length > 0 || hasPortraitInfobox) && (
       <aside class="infobox" aria-label="Infobox">
         <div class="infobox-header">{article.title}</div>
-        {isPerson && (
+        {hasPortraitInfobox && (
           <div class="infobox-image">
             {article.photo ? (
               <img
