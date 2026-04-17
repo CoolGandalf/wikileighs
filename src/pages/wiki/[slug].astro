@@ -26,7 +26,7 @@ if (!article) {
 
 const infoboxPairs = getInfoboxAsPairs(article);
 const incoming = getIncomingLinks(article.slug).slice(0, 12);
-const hasPortraitInfobox = article.type === 'person' || article.type === 'canon';
+const hasPortraitInfobox = article.type === 'person' || article.type === 'figure';
 
 const editSubject = encodeURIComponent(`[cc:Mac] WikiLeighs edit: ${article.title}`);
 const editBody = encodeURIComponent(
