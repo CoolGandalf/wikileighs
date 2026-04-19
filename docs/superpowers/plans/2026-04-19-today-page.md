@@ -153,23 +153,26 @@ if [[ -d "$inbox_dir" ]]; then
 fi
 
 # --- Cron runs today (parsed from openclaw cron run jsonl files) ---
+# Run records have shape: {ts, jobId, action, status, summary, runAtMs, ...}
+# Job names live in jobs.json keyed by id — slurp that for the join.
 cron_json='[]'
 runs_dir="$HOME/.openclaw/cron/runs"
+jobs_cfg="$HOME/.openclaw/cron/jobs.json"
 if [[ -d "$runs_dir" ]]; then
-  # Aggregate by job_id: count runs, count ok/error, capture last
   cron_json="$(find "$runs_dir" -name '*.jsonl' -type f 2>/dev/null \
     | xargs -I{} cat {} 2>/dev/null \
-    | jq -s --argjson midnight "$MIDNIGHT_EPOCH" '
-        map(select((.startedAtMs // 0) / 1000 >= $midnight))
+    | jq -s --argjson midnight_ms "$((MIDNIGHT_EPOCH * 1000))" --slurpfile cfg "$jobs_cfg" '
+        (($cfg[0].jobs // []) | map({key: .id, value: .name}) | from_entries) as $names
+        | map(select((.ts // .runAtMs // 0) >= $midnight_ms))
         | group_by(.jobId)
         | map({
             job_id: .[0].jobId,
-            name: (.[0].jobName // .[0].name // "unknown"),
+            name: ($names[.[0].jobId] // .[0].jobId),
             runs_today: length,
             ok: (map(select(.status == "ok")) | length),
             error: (map(select(.status == "error")) | length),
-            last_status: (sort_by(.startedAtMs) | last | .status),
-            last_summary: (sort_by(.startedAtMs) | last | (.replyText // .reply // "") | tostring | .[0:200])
+            last_status: (sort_by(.ts // .runAtMs) | last | .status),
+            last_summary: (sort_by(.ts // .runAtMs) | last | (.summary // "") | tostring | .[0:200])
           })' 2>/dev/null || echo '[]')"
 fi
 
