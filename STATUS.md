@@ -1,7 +1,22 @@
 # WikiLeighs — STATUS
 
-**Updated:** 2026-04-16 (night-shift)
-**Status:** MVP running; production build is clean
+**Updated:** 2026-04-19 (macbookair) — external deploy complete
+**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP, 30-day session). GitHub Actions auto-deploy from main; vault content pulled at build time via `VAULT_READ_TOKEN`. 501 pages built clean.
+
+## Deploy architecture (2026-04-19)
+
+- **Hosting:** GitHub Pages (repo set to **public** 2026-04-17). Project-pages URL `CoolGandalf.github.io/wikileighs/` auto-301s to `lgl.gg/wikileighs/` (inheriting the landing-page repo's CNAME). Seneca pattern.
+- **DNS:** Cloudflare zone (moved from Porkbun 2026-04-17). Nameservers `cody.ns.cloudflare.com` + `indie.ns.cloudflare.com`. A records Proxied (orange cloud). SSL mode Full (strict).
+- **Auth:** Cloudflare Access application on `lgl.gg/wikileighs/*`. Team `coolgandalf.cloudflareaccess.com`. Policy: Allow → email `leigh.llewelyn@gmail.com`. Auth: One-time PIN (email OTP).
+- **Build pipeline:** `.github/workflows/deploy.yml`. Triggers on push to main, manual `workflow_dispatch`, or `repository_dispatch(vault-changed)`. Checks out wikileighs + leigh-wiki (via `VAULT_READ_TOKEN` fine-grained PAT, Contents: Read, 90-day expiration). Runs `npm ci` + `npm run build`, deploys to GitHub Pages.
+- **Subpath config:** `astro.config.mjs` has `base: '/wikileighs/'`. All internal links use `import.meta.env.BASE_URL` + relative path. Inline TopBar search script receives BASE_URL via `define:vars`.
+- **Change-request loop:** Every article page has a "✎ Suggest edit" tab → opens `mailto:leigh.llewelyn@gmail.com` with `[cc:Mac] WikiLeighs edit: <title>` subject + body containing page title, slug, and source path. Routes through existing Monitor → Cortana/Librarian pickup. First live use 2026-04-19 (XDA article capture).
+
+## Pending
+
+- **Rotate VAULT_READ_TOKEN** — current one passed through plaintext email + chat transcript. Scope is tight (read-only, one repo, 90-day), risk bounded but non-zero.
+- **Auto-rebuild hook** from leigh-wiki push → wikileighs `repository_dispatch(vault-changed)` — currently vault pushes don't auto-trigger wikileighs rebuild. Optional.
+- **Node 20 deprecation** in Action — GH forcing Node 24 in June 2026. Non-blocking.
 
 ## What it is
 
