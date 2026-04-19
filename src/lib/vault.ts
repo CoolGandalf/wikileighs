@@ -15,6 +15,19 @@ if (!VAULT_ROOT) {
   );
 }
 const NOTES_ROOT = path.join(VAULT_ROOT, 'notes');
+const VOICE_MEMO_ROOT = path.join(VAULT_ROOT, 'journal', 'personal');
+const MIN_VOICE_MEMO_WORDS = 20;
+
+function humanizeVoiceMemoTitle(baseName: string): string {
+  const m = baseName.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})/);
+  if (!m) return baseName;
+  const [, y, mo, d, hh, mm] = m;
+  const date = new Date(`${y}-${mo}-${d}T${hh}:${mm}:00`);
+  if (isNaN(date.getTime())) return baseName;
+  const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `Voice memo — ${dateStr} ${timeStr}`;
+}
 
 export interface Article {
   slug: string;
@@ -307,6 +320,70 @@ function getCache() {
     byTitle.set(normalizeTitle(title), article);
     byTitle.set(normalizeTitle(baseName), article);
     for (const a of aliases) byTitle.set(normalizeTitle(a), article);
+  }
+
+  // Also load voice memos from journal/personal/ as first-class articles
+  // so wikilinks like [[2026-04-19-121450]] resolve. Skip stubs (<20 words)
+  // and strip the auto-generated "# Voice Memo ..." h1.
+  if (fs.existsSync(VOICE_MEMO_ROOT)) {
+    const vmFiles = fg.sync(['*.md'], {
+      cwd: VOICE_MEMO_ROOT,
+      onlyFiles: true,
+      absolute: true,
+      dot: false,
+    });
+
+    for (const abs of vmFiles) {
+      const baseName = path.basename(abs, '.md');
+      if (!/^\d{4}-\d{2}-\d{2}/.test(baseName)) continue;
+      const rel = `journal/personal/${path.basename(abs)}`;
+
+      let raw: string;
+      try {
+        raw = fs.readFileSync(abs, 'utf8');
+      } catch {
+        continue;
+      }
+
+      const parsed = matter(raw);
+      const fm = parsed.data as Record<string, unknown>;
+      let bodyMd = parsed.content.replace(/^\s*#\s+Voice Memo .*$/m, '').replace(/^\s*\n+/, '');
+
+      if (countWords(bodyMd) < MIN_VOICE_MEMO_WORDS) continue;
+
+      const slug = slugify(baseName);
+      if (!slug || bySlug.has(slug)) continue;
+
+      const title = humanizeVoiceMemoTitle(baseName);
+      const article: Article = {
+        slug,
+        title,
+        type: 'voice-memo',
+        tags: asStringArray(fm.tags),
+        status: coerceString(fm.status),
+        created: coerceString(fm.created),
+        updated: coerceString(fm.updated),
+        source: coerceString(fm.source),
+        related: [],
+        aliases: [baseName],
+        infobox: buildInfobox(fm),
+        bodyMd,
+        html: '',
+        toc: [],
+        outbound: [],
+        relPath: rel,
+        wordCount: countWords(bodyMd),
+        hasImage: false,
+        firstParagraph: extractFirstParagraph(bodyMd),
+        photo: null,
+        featured: false,
+      };
+
+      articles.push(article);
+      bySlug.set(slug, article);
+      byTitle.set(normalizeTitle(title), article);
+      byTitle.set(normalizeTitle(baseName), article);
+    }
   }
 
   for (const article of articles) {
