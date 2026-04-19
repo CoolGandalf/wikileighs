@@ -113,11 +113,11 @@ Pure data collector. Zero LLM, zero opinions. Writes one JSON file.
 | reminders | `remindctl list --json` filtered to today/overdue |
 | todos | `cat ~/Projects/vault/notes/TODO.md` + count lines matching `^- \[ \]` |
 | voice_memos | `find ~/Projects/vault/journal/personal -name "<today>-*.md"` + parse |
-| vault_added | `git -C ~/Projects/vault log --since=midnight --diff-filter=A --name-only --pretty=format: \| sort -u` |
+| vault_added | `git -C ~/Projects/vault log --since=midnight --diff-filter=A --name-only --pretty=format: \| sort -u \| grep -v "^journal/today/"` |
 | vault_updated | `git -C ~/Projects/vault log --since=midnight --diff-filter=M --name-only --pretty=format: \| sort -u \| grep -v "^journal/today/"` |
 | inbox_added | `find ~/Projects/vault/inbox -newer <midnight-marker> -name "*.md"` |
 | cron_runs | `find ~/.openclaw/cron/runs -name "*.jsonl" -newer <midnight-marker>` |
-| yesterday_briefing | parse `journal/today/<yesterday>.md` between `## Briefing` and next `##` |
+| yesterday_briefing | parse `journal/today/<yesterday>.md` between `## Briefing` and next `##` (null if file does not exist — day-1 case) |
 
 **Failure mode:** any sub-command failure logs to stderr but does NOT abort.
 The JSON contains whatever was successfully gathered; missing keys default
@@ -129,8 +129,9 @@ gracefully ("No calendar events today" etc.).
 New job in `~/.openclaw/cron/jobs.json`:
 
 - **Name:** `Today Page Refresh`
-- **Schedule:** `cron 0 7-23 * * *`, tz `America/New_York`, staggerMs 60000
-  (1-minute random offset to avoid colliding with voice-memo cron at minute 0)
+- **Schedule:** `cron 30 7-23 * * *`, tz `America/New_York`, staggerMs 60000
+  (1-minute random offset; runs at HH:30 to avoid colliding with the
+  voice-memo cron at HH:00 which has a 5-minute stagger)
 - **wakeMode:** `now`
 - **sessionTarget:** `isolated`
 - **payload:**
@@ -250,6 +251,9 @@ each `- [ ] item` rendered as a bullet, [[wikilinks]] preserved>
 **Carryover:** N TODOs were also open yesterday.
 
 </details>
+
+(Yesterday tail omitted entirely if `yesterday_briefing` is null —
+day-1 case where no prior snapshot exists.)
 ```
 
 **Section omission rules:** any section with zero items is omitted entirely
@@ -312,10 +316,13 @@ Approved in brainstorming:
 - (l) Inbox/ items created today
 
 **Bucket 3 — Agent activity (summarized)**
-- (o) Openclaw cron runs today
-- (p) Vault commits by agents today (parsed from commit message prefixes:
-  `voice-memo-actions:`, `librarian:`, `cortana:`, `today:`, etc.)
+- (o) Openclaw cron runs today (covers nearly all agent activity by
+  proxy — voice-memo cron, librarian cron, morning briefing, etc.)
 - (t) Errors / failures (cron `lastRunStatus: error` aggregated)
+- *(p) Vault commits by agents — dropped from v1 to avoid duplication
+  with (o); cron runs already produce the commits, so summarizing both
+  reads as repetition. Move to v2 if commit-author granularity becomes
+  useful.*
 
 **Deferred to v2:** health metrics (e), weather (f), morning briefing email
 content (g), Librarian-Queue items (m), Notion mirror (n — explicitly
