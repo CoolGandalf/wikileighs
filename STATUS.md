@@ -1,7 +1,7 @@
 # WikiLeighs — STATUS
 
-**Updated:** 2026-04-19 (macbookair) — external deploy complete
-**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP, 30-day session). GitHub Actions auto-deploy from main; vault content pulled at build time via `VAULT_READ_TOKEN`. 501 pages built clean.
+**Updated:** 2026-04-19 (macbookair) — Today page system + voice memos in graph + auto-deploy chain
+**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP, 30-day session). GitHub Actions auto-deploy from main; vault content pulled at build time via `VAULT_READ_TOKEN`. **Vault push now auto-triggers wikileighs deploy** via `repository_dispatch(vault-changed)` (vault-side `notify-wikileighs.yml` + `WIKILEIGHS_DISPATCH_PAT`). **1020 pages built clean** (was 505 — voice memos now first-class wiki pages). Today page lives at `/today` (current) + `/today/[date]` (archive); cron-generated hourly snapshot in `journal/today/YYYY-MM-DD.md`.
 
 ## Deploy architecture (2026-04-19)
 
@@ -14,9 +14,18 @@
 
 ## Pending
 
-- **Rotate VAULT_READ_TOKEN** — current one passed through plaintext email + chat transcript. Scope is tight (read-only, one repo, 90-day), risk bounded but non-zero.
-- **Auto-rebuild hook** from leigh-wiki push → wikileighs `repository_dispatch(vault-changed)` — currently vault pushes don't auto-trigger wikileighs rebuild. Optional.
+- **Today page: Reminders display bug** — section shows reminder LIST names ("Shopping, Reminders, Alexa To Do List, Todoist, Evernote, IFTTT") instead of items. `gather.sh` reminders parser needs to match the right shape from `remindctl list --json`.
+- **Today page: Vault content section is noisy** — surfaces system/scratch files (`Untitled 2.canvas`, `STATUS.md`, `hot.md`, `notify-wikileighs.yml`). Filter system files in `gather.sh` and/or the agent prompt.
+- **Rotate `WIKILEIGHS_DISPATCH_PAT` before 2026-07-18** (90-day expiry; recorded in `notes/API Keys/API Keys.md`).
+- **Rotate `VAULT_READ_TOKEN`** — separate token, expires ~2026-07-16.
 - **Node 20 deprecation** in Action — GH forcing Node 24 in June 2026. Non-blocking.
+
+## What was done this session (2026-04-19 evening)
+
+- New routes: `src/pages/today.astro` (replaced live computation with snapshot loader + fallback), `src/pages/today/[date].astro` (archive route via `getStaticPaths`).
+- New `src/lib/vault.ts` helpers: `getTodayPage(date)`, `listTodayPageDates()`. Plus extended `loadAllArticles()` to glob `journal/personal/*.md` so voice memos become first-class articles (type `voice-memo`, stubs <20 words filtered, humanized title, slug-style baseName aliased so `[[2026-04-19-121450]]` resolves).
+- Spec + plan committed under `docs/superpowers/{specs,plans}/`.
+- Auto-deploy chain: vault-side `.github/workflows/notify-wikileighs.yml` fires `repository_dispatch(vault-changed)` on push; wikileighs `deploy.yml` already listened for it.
 
 ## What it is
 
