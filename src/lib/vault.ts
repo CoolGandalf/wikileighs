@@ -676,6 +676,24 @@ export function getDailyNote(date: Date): Article | null {
   return loadStandaloneMdFile(abs, `journal/daily/${stamp}.md`);
 }
 
+export function getTodayPage(date: Date): Article | null {
+  const stamp = formatYMDDashed(date);
+  const abs = path.join(VAULT_ROOT!, 'journal', 'today', `${stamp}.md`);
+  if (!fs.existsSync(abs)) return null;
+  return loadStandaloneMdFile(abs, `journal/today/${stamp}.md`);
+}
+
+export function listTodayPageDates(): string[] {
+  const dir = path.join(VAULT_ROOT!, 'journal', 'today');
+  if (!fs.existsSync(dir)) return [];
+  const files = fg.sync(['*.md'], { cwd: dir, onlyFiles: true });
+  return files
+    .map((f) => f.replace(/\.md$/, ''))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort()
+    .reverse();
+}
+
 export function getVoiceMemosForDate(date: Date): Article[] {
   const stamp = formatYMDDashed(date);
   const dir = path.join(VAULT_ROOT!, 'journal', 'personal');
