@@ -17,6 +17,48 @@ for (const a of articles) {
 }
 const sortedGroups = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
 const BASE_URL = import.meta.env.BASE_URL;
+
+// For type=project, build a status-grouped overview as the intro.
+const isProjects = type === 'project';
+const STATUS_BUCKETS: Array<{ key: string; label: string; matches: (s: string | null) => boolean }> = [
+  { key: 'active',      label: 'Active',         matches: (s) => s === 'active' },
+  { key: 'in-progress', label: 'In progress',    matches: (s) => s === 'in-progress' || s === 'in progress' },
+  { key: 'paused',      label: 'Paused',         matches: (s) => s === 'paused' || s === 'on-hold' || s === 'on hold' },
+  { key: 'planned',     label: 'Planned / Ideas', matches: (s) => s === 'planned' || s === 'idea' || s === 'backlog' },
+  { key: 'shipped',     label: 'Shipped / Complete', matches: (s) => s === 'shipped' || s === 'complete' || s === 'completed' || s === 'done' },
+  { key: 'archived',    label: 'Archived',       matches: (s) => s === 'archived' || s === 'seasonal' },
+  { key: 'other',       label: 'Other / Unstatused', matches: () => true },
+];
+
+type StatusBucket = { key: string; label: string; items: typeof articles };
+const statusOverview: StatusBucket[] = [];
+if (isProjects) {
+  const remaining = [...articles];
+  for (const bucket of STATUS_BUCKETS) {
+    const items: typeof articles = [];
+    for (let i = remaining.length - 1; i >= 0; i--) {
+      const a = remaining[i];
+      const s = (a.status || '').toLowerCase().trim() || null;
+      if (bucket.matches(s)) {
+        items.push(a);
+        remaining.splice(i, 1);
+      }
+    }
+    items.sort((a, b) => {
+      const au = a.updated || '';
+      const bu = b.updated || '';
+      if (au !== bu) return bu.localeCompare(au); // most-recent first
+      return a.title.localeCompare(b.title);
+    });
+    if (items.length) statusOverview.push({ key: bucket.key, label: bucket.label, items });
+  }
+}
+
+function truncate(s: string, n: number): string {
+  if (!s) return '';
+  const clean = s.replace(/\s+/g, ' ').trim();
+  return clean.length <= n ? clean : clean.slice(0, n - 1).trimEnd() + '…';
+}
 ---
 <Base title={pluralizeType(type!)} activeType={type}>
   <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Category</div>
@@ -25,6 +67,53 @@ const BASE_URL = import.meta.env.BASE_URL;
     <p>
       {articles.length} {articles.length === 1 ? 'article' : 'articles'} of type <strong>{humanizeType(type!)}</strong>.
     </p>
+
+    {isProjects && statusOverview.length > 0 && (
+      <section style="margin-top: 1.5rem;">
+        <h2 id="status-overview">Status overview</h2>
+        <p style="color: var(--color-muted); font-size: 0.9em; margin-top: 0.25rem;">
+          Auto-derived from each project page's <code>status:</code> frontmatter. Sorted within each bucket by most recently updated.
+        </p>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.92em; margin-top: 0.75rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--color-border, #ccc); text-align: left;">
+              <th style="padding: 0.35rem 0.5rem; width: 24%;">Project</th>
+              <th style="padding: 0.35rem 0.5rem; width: 11%;">Updated</th>
+              <th style="padding: 0.35rem 0.5rem;">Summary</th>
+            </tr>
+          </thead>
+          <tbody>
+            {statusOverview.map(bucket => (
+              <>
+                <tr>
+                  <td colspan="3" style="padding: 0.75rem 0.5rem 0.25rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.04em;">
+                    {bucket.label} <span style="font-weight: 400; opacity: 0.7;">· {bucket.items.length}</span>
+                  </td>
+                </tr>
+                {bucket.items.map(a => (
+                  <tr style="border-bottom: 1px solid var(--color-border, #eee);">
+                    <td style="padding: 0.35rem 0.5rem; vertical-align: top;">
+                      <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
+                    </td>
+                    <td style="padding: 0.35rem 0.5rem; vertical-align: top; color: var(--color-muted); font-variant-numeric: tabular-nums; font-size: 0.88em;">
+                      {a.updated || '—'}
+                    </td>
+                    <td style="padding: 0.35rem 0.5rem; vertical-align: top; color: var(--color-muted); font-size: 0.92em;">
+                      {truncate(a.firstParagraph, 160)}
+                    </td>
+                  </tr>
+                ))}
+              </>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )}
+
+    {isProjects && statusOverview.length > 0 && (
+      <h2 style="margin-top: 2rem;" id="alphabetical">Alphabetical</h2>
+    )}
 
     {sortedGroups.map(([letter, list]) => (
       <section style="margin-top: 1rem;">
