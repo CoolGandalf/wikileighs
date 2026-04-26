@@ -1,7 +1,16 @@
 # WikiLeighs — STATUS
 
-**Updated:** 2026-04-19 (macbookair) — Today page system + voice memos in graph + auto-deploy chain
-**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP, 30-day session). GitHub Actions auto-deploy from main; vault content pulled at build time via `VAULT_READ_TOKEN`. **Vault push now auto-triggers wikileighs deploy** via `repository_dispatch(vault-changed)` (vault-side `notify-wikileighs.yml` + `WIKILEIGHS_DISPATCH_PAT`). **1020 pages built clean** (was 505 — voice memos now first-class wiki pages). Today page lives at `/today` (current) + `/today/[date]` (archive); cron-generated hourly snapshot in `journal/today/YYYY-MM-DD.md`.
+**Updated:** 2026-04-26 (macbookair, branch `main`) — `/category/project` now status-aware
+**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP, 30-day session). GitHub Actions auto-deploy from main; vault content pulled at build time via `VAULT_READ_TOKEN`. **Vault push now auto-triggers wikileighs deploy** via `repository_dispatch(vault-changed)` (vault-side `notify-wikileighs.yml` + `WIKILEIGHS_DISPATCH_PAT`). **1362 pages built clean.** Today page lives at `/today` (current) + `/today/[date]` (archive); cron-generated hourly snapshot in `journal/today/YYYY-MM-DD.md`.
+
+## What was done this session (2026-04-26 afternoon, pre-flight LGA — Cortana)
+
+- `src/pages/category/[type].astro`: when `type === 'project'`, prepend a status-grouped overview table (Project / Updated / Summary) before the existing alphabetical list. Buckets: Active, In progress, Paused, Planned/Ideas, Shipped, Archived, Other — empty buckets are not rendered. Within each bucket, items sort by `updated:` desc. All other category pages (concept, person, etc.) unchanged. Build verified locally (1362 pages, 12.88s). Commit `b3fde9a`, pushed to origin/main → deploy pipeline triggered.
+
+## Next up (added this session)
+
+- `notes/Project Status Dashboard.md` partially obsolete — Active/Planned/Paused tables now duplicated by the live page; future pass should shrink it to just the supplementary content (GitHub repo URLs, tech stacks, live URLs, Infrastructure repos) and link the live page for status.
+- Frontmatter normalization: 5 shipped projects (Keats, StoicBot, Pillars, Core Compass, ForceRank) carry `status: active`. Flip them to `status: shipped` to surface a Shipped bucket on the live page.
 
 ## Deploy architecture (2026-04-19)
 
