@@ -742,6 +742,8 @@ function loadStandaloneMdFile(absPath: string, relPath: string): Article | null 
     wordCount: countWords(bodyMd),
     hasImage: detectImage(bodyMd),
     firstParagraph: extractFirstParagraph(bodyMd),
+    photo: resolvePhoto(fm.photo),
+    featured: coerceBool(fm.featured),
   };
   return article;
 }
@@ -757,7 +759,20 @@ export function getTodayPage(date: Date): Article | null {
   const stamp = formatYMDDashed(date);
   const abs = path.join(VAULT_ROOT!, 'journal', 'today', `${stamp}.md`);
   if (!fs.existsSync(abs)) return null;
-  return loadStandaloneMdFile(abs, `journal/today/${stamp}.md`);
+  const article = loadStandaloneMdFile(abs, `journal/today/${stamp}.md`);
+  if (article && !article.photo) {
+    // Convention: a photo at attachments/today-photos/<YYYY-MM-DD>.<ext>
+    // becomes the hero. Survives cron regeneration of the markdown without
+    // requiring photo: frontmatter (which the today-page generator overwrites).
+    for (const ext of ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.svg']) {
+      const resolved = resolvePhoto(`today-photos/${stamp}${ext}`);
+      if (resolved) {
+        article.photo = resolved;
+        break;
+      }
+    }
+  }
+  return article;
 }
 
 export function listTodayPageDates(): string[] {
