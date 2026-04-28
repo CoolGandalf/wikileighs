@@ -373,10 +373,10 @@ function getCache() {
         outbound: [],
         relPath: rel,
         wordCount: countWords(bodyMd),
-        hasImage: false,
+        hasImage: detectImage(bodyMd),
         firstParagraph: extractFirstParagraph(bodyMd),
-        photo: null,
-        featured: false,
+        photo: resolvePhoto(fm.photo),
+        featured: coerceBool(fm.featured),
       };
 
       articles.push(article);
