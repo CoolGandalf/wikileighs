@@ -85,6 +85,12 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
 
     <StubBanner article={article} />
 
+    {article.photo && !hasPortraitInfobox && (
+      <figure class="today-hero">
+        <img src={article.photo} alt={article.title} loading="lazy" />
+      </figure>
+    )}
+
     {(infoboxPairs.length > 0 || hasPortraitInfobox) && (
       <aside class="infobox" aria-label="Infobox">
         <div class="infobox-header">{article.title}</div>
