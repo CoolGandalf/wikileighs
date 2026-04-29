@@ -1,25 +1,59 @@
 ---
 import {
   getTypeCounts,
-  getArticlesByType,
+  loadAllArticles,
   humanizeType,
   pluralizeType,
   getStubs,
   getOrphans,
   getBrokenWikilinks,
+  slugify,
 } from '../lib/vault';
 
 interface Props { activeType?: string }
 const { activeType } = Astro.props;
 const typeCounts = getTypeCounts();
-const featuredTypes = typeCounts.slice(0, 4);
-const spotlightArticles = featuredTypes.flatMap(tc => getArticlesByType(tc.type).slice(0, 5));
 const BASE_URL = import.meta.env.BASE_URL;
 
 // Gap counters — compute the totals, not the capped top-N, for the footer summary.
 const stubCount = getStubs(10_000).length;
 const orphanCount = getOrphans(10_000).length;
 const brokenCount = getBrokenWikilinks(10_000).length;
+
+// Change 5: Priority types pinned to top of Categories
+const PRIORITY_TYPES = ['project', 'person', 'idea', 'voice-memo', 'reference'];
+const priorityTypeCounts = PRIORITY_TYPES
+  .map(t => typeCounts.find(tc => tc.type === t))
+  .filter((tc): tc is NonNullable<typeof tc> => tc != null);
+const remainingTypeCounts = typeCounts
+  .filter(tc => !PRIORITY_TYPES.includes(tc.type))
+  .sort((a, b) => humanizeType(a.type).localeCompare(humanizeType(b.type)));
+
+// Change 5: Pinned articles in the Pages section
+const PINNED_ARTICLE_TITLES = [
+  'Reading List',
+  'TODO',
+  'Bookshelf',
+  'Trends Index',
+  'Project Status Dashboard',
+];
+
+function normalizeTitle(t: string): string {
+  return t.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+const allArticles = loadAllArticles();
+const articlesByTitle = new Map<string, typeof allArticles[0]>();
+for (const a of allArticles) {
+  articlesByTitle.set(normalizeTitle(a.title), a);
+  // Also index by baseName (slug's source)
+  const slugKey = normalizeTitle(a.slug.replace(/-/g, ' '));
+  if (!articlesByTitle.has(slugKey)) articlesByTitle.set(slugKey, a);
+}
+
+const pinnedArticles = PINNED_ARTICLE_TITLES
+  .map(title => articlesByTitle.get(normalizeTitle(title)))
+  .filter((a): a is NonNullable<typeof a> => a != null);
 ---
 <nav class="rail" aria-label="Navigation">
   <div class="rail-heading">Navigation</div>
@@ -33,7 +67,7 @@ const brokenCount = getBrokenWikilinks(10_000).length;
 
   <div class="rail-heading">Categories</div>
   <ul>
-    {typeCounts.map(tc => (
+    {priorityTypeCounts.map(tc => (
       <li>
         <a href={`${BASE_URL}category/${tc.type}`} style={tc.type === activeType ? 'font-weight: 700;' : ''}>
           {pluralizeType(tc.type)} <span style="color: var(--color-muted)">({tc.count})</span>
@@ -41,12 +75,29 @@ const brokenCount = getBrokenWikilinks(10_000).length;
       </li>
     ))}
   </ul>
+  {remainingTypeCounts.length > 0 && (
+    <>
+      <div class="rail-subheading">More categories</div>
+      <ul>
+        {remainingTypeCounts.map(tc => (
+          <li>
+            <a href={`${BASE_URL}category/${tc.type}`} style={tc.type === activeType ? 'font-weight: 700;' : ''}>
+              {pluralizeType(tc.type)} <span style="color: var(--color-muted)">({tc.count})</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
 
-  <div class="rail-heading">Pages</div>
+  <div class="rail-heading">Pinned</div>
   <ul>
-    {spotlightArticles.map(a => (
+    {pinnedArticles.map(a => (
       <li><a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a></li>
     ))}
+    {pinnedArticles.length === 0 && (
+      <li style="color: var(--color-muted); font-style: italic;">No pinned articles found</li>
+    )}
   </ul>
 
   <div class="rail-footer">
@@ -66,4 +117,15 @@ const brokenCount = getBrokenWikilinks(10_000).length;
     color: var(--color-muted);
   }
   .rail-footer a:hover { text-decoration: underline; }
+  .rail-subheading {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.55rem;
+    margin-bottom: 0.15rem;
+    padding-bottom: 0.1rem;
+    border-bottom: 1px dotted var(--color-border-light);
+  }
 </style>

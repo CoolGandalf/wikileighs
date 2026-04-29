@@ -3,19 +3,89 @@ import Base from '../layouts/Base.astro';
 import {
   loadAllArticles,
   getTypeCounts,
-  getRecentArticles,
   getRecentlyUpdated,
   getFeaturedArticle,
   getArticlesByType,
+  getTodayPage,
+  getLatestUploadHero,
   humanizeType,
   pluralizeType,
 } from '../lib/vault';
 
 const all = loadAllArticles();
 const typeCounts = getTypeCounts();
-const recent = getRecentArticles(8);
 const recentlyUpdated = getRecentlyUpdated(8);
 const featured = getFeaturedArticle();
+const heroPhoto = getLatestUploadHero();
+
+// Today block
+const todayDate = new Date();
+const todayPage = getTodayPage(todayDate);
+
+function pad2(n: number): string { return n < 10 ? `0${n}` : String(n); }
+const todayStamp = `${todayDate.getFullYear()}-${pad2(todayDate.getMonth() + 1)}-${pad2(todayDate.getDate())}`;
+
+// Extract briefing first paragraph from today's bodyMd
+function extractBriefingParagraph(bodyMd: string): string {
+  const lines = bodyMd.split('\n');
+  const idx = lines.findIndex((l) => /^##\s+Briefing/i.test(l.trim()));
+  if (idx < 0) return '';
+  const buf: string[] = [];
+  let started = false;
+  for (let i = idx + 1; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t) {
+      if (started) break;
+      continue;
+    }
+    if (t.startsWith('#')) { if (started) break; continue; }
+    started = true;
+    buf.push(t);
+  }
+  return buf
+    .join(' ')
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_: string, tgt: string, alias: string) => alias || tgt)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[*_`]/g, '')
+    .slice(0, 420);
+}
+
+function extractTodayStats(bodyMd: string): { voiceMemos: number; photos: number; agentRuns: number | null } {
+  const vmMatch = bodyMd.match(/###\s+Voice memos\s+\((\d+)\)/i);
+  const voiceMemos = vmMatch ? parseInt(vmMatch[1], 10) : 0;
+
+  const photoCapturesMatch = bodyMd.match(/(\d+)\s+captures?/i);
+  const photos = photoCapturesMatch ? parseInt(photoCapturesMatch[1], 10) : 0;
+
+  const agentTotalMatch = bodyMd.match(/(\d+)\s+total\s+runs?/i);
+  let agentRuns: number | null = null;
+  if (agentTotalMatch) {
+    agentRuns = parseInt(agentTotalMatch[1], 10);
+  } else {
+    // Fallback: count lines like **AgentName** — N runs
+    const runLines = bodyMd.match(/\*\*[^*]+\*\*\s*—\s*\d+\s+runs?/g);
+    if (runLines && runLines.length > 0) {
+      let total = 0;
+      for (const l of runLines) {
+        const m = l.match(/(\d+)\s+runs?/);
+        if (m) total += parseInt(m[1], 10);
+      }
+      agentRuns = total > 0 ? total : null;
+    }
+  }
+
+  return { voiceMemos, photos, agentRuns };
+}
+
+const todayBriefing = todayPage
+  ? (extractBriefingParagraph(todayPage.bodyMd) || todayPage.firstParagraph)
+  : '';
+const todayStats = todayPage ? extractTodayStats(todayPage.bodyMd) : null;
+
+// Format today's date as "Wednesday April 29 2026"
+const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const todayLabel = `${dayNames[todayDate.getDay()]} ${monthNames[todayDate.getMonth()]} ${todayDate.getDate()} ${todayDate.getFullYear()}`;
 
 const categoriesForBrowse = typeCounts
   .map(tc => ({
@@ -35,13 +105,50 @@ const BASE_URL = import.meta.env.BASE_URL;
     </p>
   </section>
 
+  <section class="today-block">
+    <h2 class="today-block-heading">Today, {todayLabel}</h2>
+    {todayPage ? (
+      <div>
+        {todayBriefing && <p class="today-briefing">{todayBriefing}</p>}
+        {todayStats && (
+          <p class="today-stats">
+            {todayStats.voiceMemos > 0 && <span>{todayStats.voiceMemos} voice memo{todayStats.voiceMemos !== 1 ? 's' : ''}</span>}
+            {todayStats.voiceMemos > 0 && todayStats.photos > 0 && <span class="today-stats-sep"> · </span>}
+            {todayStats.photos > 0 && <span>{todayStats.photos} photo{todayStats.photos !== 1 ? 's' : ''}</span>}
+            {(todayStats.voiceMemos > 0 || todayStats.photos > 0) && todayStats.agentRuns !== null && <span class="today-stats-sep"> · </span>}
+            {todayStats.agentRuns !== null && <span>{todayStats.agentRuns} agent run{todayStats.agentRuns !== 1 ? 's' : ''}</span>}
+          </p>
+        )}
+        <p class="today-read-more">
+          <a href={`${BASE_URL}today/${todayStamp}`}>Read full snapshot →</a>
+        </p>
+      </div>
+    ) : (
+      <div>
+        <p class="today-briefing" style="color: var(--color-muted); font-style: italic;">
+          Today's snapshot hasn't generated yet. Next refresh top of the hour.
+        </p>
+        <p class="today-read-more">
+          <a href={`${BASE_URL}today`}>View recent snapshots →</a>
+        </p>
+      </div>
+    )}
+  </section>
+
   <div class="contents-row">
     <div>
       {featured && (
         <section class="featured-block">
           <div class="featured-header">Featured article</div>
           <div class="featured-body">
-            <div class="featured-image-placeholder" aria-hidden="true"></div>
+            {heroPhoto ? (
+              <figure class="featured-hero">
+                <img src={heroPhoto.src} alt={`Latest upload — ${heroPhoto.date}`} loading="lazy" />
+                <figcaption>{heroPhoto.date}</figcaption>
+              </figure>
+            ) : (
+              <div class="featured-image-placeholder" aria-hidden="true"></div>
+            )}
             <span class="featured-title"><a href={`${BASE_URL}wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">{featured.title}</a></span>
             {' '}— {featured.firstParagraph}
             {' '}
@@ -90,20 +197,6 @@ const BASE_URL = import.meta.env.BASE_URL;
     </div>
 
     <div>
-      <section class="card">
-        <div class="card-header">Latest activity</div>
-        <div class="card-body">
-          <ul>
-            {recent.map(a => (
-              <li>
-                <a href={`${BASE_URL}wiki/${a.slug}`} style="color: var(--color-link); text-decoration: none;">{a.title}</a>
-                <span class="date">{a.updated}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
       <section class="card">
         <div class="card-header">About WikiLeighs</div>
         <div class="card-body">

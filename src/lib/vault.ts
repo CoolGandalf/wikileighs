@@ -491,10 +491,11 @@ export function getRecentlyUpdated(n = 8): Article[] {
  *   1. Any article with frontmatter `featured: true` — if multiple are flagged,
  *      the one with the most recent `updated:` wins (falls back to `created:`,
  *      then title).
- *   2. Otherwise, the longest non-report article with wordCount > 400.
+ *   2. Otherwise, picks uniformly at random from articles that pass quality
+ *      filters: wordCount ≥ 200, status ≠ stub, type ∉ {voice-memo, log, today, report}.
  *
- * Flip curation by editing the note: add `featured: true` in the YAML
- * frontmatter. Remove or set `false` to return to the automatic pick.
+ * The build runs ~hourly via vault-changed dispatch, so randomness rotates naturally.
+ * Flip manual curation by editing the note: add `featured: true` in the YAML frontmatter.
  */
 export function getFeaturedArticle(): Article | undefined {
   const all = loadAllArticles();
@@ -508,9 +509,33 @@ export function getFeaturedArticle(): Article | undefined {
     });
     return manual[0];
   }
-  const pool = all.filter((a) => a.wordCount > 400 && !a.relPath.startsWith('_') && a.type !== 'report');
-  pool.sort((a, b) => b.wordCount - a.wordCount);
-  return pool[0];
+  const EXCLUDED_TYPES = new Set(['voice-memo', 'log', 'today', 'report']);
+  const pool = all.filter((a) =>
+    !a.relPath.startsWith('_') &&
+    a.wordCount >= 200 &&
+    !EXCLUDED_TYPES.has(a.type) &&
+    !/^stub$/i.test(a.status || '')
+  );
+  if (!pool.length) return undefined;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Returns the most recently uploaded photo from vault/attachments/today-photos/.
+ * Filenames are expected to be YYYY-MM-DD.<ext> so lexicographic order = chronological.
+ * Returns { src: data URI, date: 'YYYY-MM-DD', filename: '...' } or null.
+ */
+export function getLatestUploadHero(): { src: string; date: string; filename: string } | null {
+  const dir = path.join(VAULT_ROOT!, 'attachments', 'today-photos');
+  if (!fs.existsSync(dir)) return null;
+  const files = fg.sync('*.{jpg,jpeg,png,webp,avif,gif,svg}', { cwd: dir, onlyFiles: true });
+  if (!files.length) return null;
+  files.sort();
+  const filename = files[files.length - 1];
+  const datePart = filename.replace(/\.[^.]+$/, '');
+  const src = resolvePhoto(`today-photos/${filename}`);
+  if (!src) return null;
+  return { src, date: datePart, filename };
 }
 
 export function getAllSlugs(): string[] {

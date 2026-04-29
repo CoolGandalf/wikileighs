@@ -403,6 +403,81 @@ body {
   border: 1px solid var(--color-border-light);
 }
 
+/* Featured hero: replaces the grey placeholder with the latest uploaded photo */
+.featured-hero {
+  float: right;
+  width: 10rem;
+  height: 10rem;
+  margin: 0 0 0.5rem 0.75rem;
+  border: 1px solid var(--color-border-light);
+  padding: 0;
+  background: #fff;
+  text-align: center;
+}
+
+.featured-hero img {
+  display: block;
+  width: 100%;
+  height: 9rem;
+  object-fit: cover;
+}
+
+.featured-hero figcaption {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 0.1rem 0.2rem;
+  line-height: 1.2;
+}
+
+/* Today block — prominently surfaced between welcome and featured */
+.today-block {
+  border: 1px solid var(--color-border-light);
+  border-left: 4px solid var(--color-accent);
+  background: #fdfcf7;
+  padding: 0.85rem 1.1rem 0.9rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-sans);
+}
+
+.today-block-heading {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 1.25rem;
+  margin-bottom: 0.45rem;
+  color: var(--color-text);
+}
+
+.today-briefing {
+  font-size: 0.97rem;
+  line-height: 1.6;
+  margin: 0 0 0.35rem;
+  color: var(--color-text);
+}
+
+.today-stats {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin: 0 0 0.35rem;
+}
+
+.today-stats-sep {
+  color: var(--color-border);
+}
+
+.today-read-more {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.today-read-more a {
+  color: var(--color-link);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.today-read-more a:hover { text-decoration: underline; }
+
 /* Card (About, Recently updated) */
 .card {
   border: 1px solid var(--color-border-light);
