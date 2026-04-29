@@ -26,6 +26,7 @@ const BASE_URL = import.meta.env.BASE_URL;
           <img src={page.photo} alt={`Today's hero — ${date}`} loading="lazy" />
         </figure>
       )}
+      <p class="today-archive-link"><a href={`${BASE_URL}today/archive`}>↗ All daily snapshots</a></p>
       <Fragment set:html={page.html} />
     </article>
   ) : (

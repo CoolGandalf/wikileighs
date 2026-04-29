@@ -671,6 +671,18 @@ body {
 
 .breadcrumb a:hover { text-decoration: underline; }
 
+/* Inline "all snapshots" link inside today / today/<date> articles */
+.today-archive-link {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  text-align: right;
+}
+.today-archive-link a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+.today-archive-link a:hover { text-decoration: underline; }
+
 /* Page chrome */
 .page-shell {
   max-width: 1400px;
