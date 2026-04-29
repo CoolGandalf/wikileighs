@@ -16,7 +16,7 @@ yesterday.setDate(yesterday.getDate() - 1);
 const yesterdayStamp = yesterday.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 ---
 <Base title="Today" description={`Daily snapshot for ${headerDate}.`}>
-  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Today</div>
+  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Today · <a href={`${BASE_URL}today/archive`}>Archive ▸</a></div>
   {todayPage ? (
     <article class="article-body">
       <Fragment set:html={todayPage.html} />
