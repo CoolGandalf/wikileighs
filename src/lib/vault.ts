@@ -347,24 +347,48 @@ function getCache() {
 
       const parsed = matter(raw);
       const fm = parsed.data as Record<string, unknown>;
-      let bodyMd = parsed.content.replace(/^\s*#\s+Voice Memo .*$/m, '').replace(/^\s*\n+/, '');
 
-      if (countWords(bodyMd) < MIN_VOICE_MEMO_WORDS) continue;
+      // Daily-journal synthesis files have filename YYYY-MM-DD.md (no HHMMSS)
+      // and frontmatter type: journal. They get full standalone treatment —
+      // honor frontmatter title, render h1 strip from base loader, type stays as
+      // declared. Voice-memo files (YYYY-MM-DD-HHMMSS.md) get the legacy path.
+      const isDailySynthesis =
+        /^\d{4}-\d{2}-\d{2}$/.test(baseName) &&
+        coerceString(fm.type)?.toLowerCase() === 'journal';
+
+      let bodyMd: string;
+      if (isDailySynthesis) {
+        bodyMd = parsed.content;
+        const titleFromFm = coerceString(fm.title) || baseName;
+        const h1Re = /^\s*#\s+(.+?)\s*$/m;
+        const h1Match = h1Re.exec(bodyMd);
+        if (h1Match && normalizeTitle(h1Match[1]) === normalizeTitle(titleFromFm)) {
+          bodyMd = bodyMd.replace(h1Re, '').replace(/^\s*\n+/, '');
+        }
+      } else {
+        bodyMd = parsed.content.replace(/^\s*#\s+Voice Memo .*$/m, '').replace(/^\s*\n+/, '');
+        if (countWords(bodyMd) < MIN_VOICE_MEMO_WORDS) continue;
+      }
 
       const slug = slugify(baseName);
       if (!slug || bySlug.has(slug)) continue;
 
-      const title = humanizeVoiceMemoTitle(baseName);
+      const title = isDailySynthesis
+        ? (coerceString(fm.title) || baseName)
+        : humanizeVoiceMemoTitle(baseName);
+      const articleType = isDailySynthesis ? 'journal' : 'voice-memo';
       const article: Article = {
         slug,
         title,
-        type: 'voice-memo',
+        type: articleType,
         tags: asStringArray(fm.tags),
         status: coerceString(fm.status),
         created: coerceString(fm.created),
         updated: coerceString(fm.updated),
         source: coerceString(fm.source),
-        related: [],
+        related: isDailySynthesis
+          ? asStringArray(fm.related).map((w) => w.replace(/^\[\[/, '').replace(/\]\]$/, '').split('|')[0].trim())
+          : [],
         aliases: [baseName],
         infobox: buildInfobox(fm),
         bodyMd,
