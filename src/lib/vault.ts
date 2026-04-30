@@ -458,9 +458,14 @@ export function getTypeCounts(): TypeCount[] {
 
 export function getArticlesByType(type: string): Article[] {
   const norm = type.toLowerCase();
+  const isChronological = norm === 'voice-memo' || norm === 'journal';
   return loadAllArticles()
     .filter((a) => a.type === norm)
-    .sort((a, b) => a.title.localeCompare(b.title));
+    .sort((a, b) =>
+      isChronological
+        ? (b.slug || '').localeCompare(a.slug || '')  // newest-slug first (slugs are YYYY-MM-DD-HHMMSS)
+        : a.title.localeCompare(b.title)
+    );
 }
 
 export function getRecentArticles(n = 8): Article[] {
