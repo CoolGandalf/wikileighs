@@ -737,7 +737,9 @@ function formatYMDCompact(d: Date): string {
 }
 
 function formatYMDDashed(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  // America/New_York anchors "today" to Leigh's day, not the build runner's
+  // (GitHub Actions runs in UTC). en-CA produces YYYY-MM-DD natively.
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
 
 function renderMarkdownStandalone(md: string): string {
