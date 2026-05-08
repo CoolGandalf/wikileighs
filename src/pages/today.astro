@@ -19,6 +19,11 @@ const yesterdayStamp = yesterday.toLocaleDateString('en-CA', { timeZone: 'Americ
   <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Today · <a href={`${BASE_URL}today/archive`}>Archive ▸</a></div>
   {todayPage ? (
     <article class="article-body">
+      {todayPage.photo && (
+        <figure class="today-hero">
+          <img src={todayPage.photo} alt={`Today's hero — ${todayPage.created || 'today'}`} loading="lazy" />
+        </figure>
+      )}
       <p class="today-archive-link"><a href={`${BASE_URL}today/archive`}>↗ All daily snapshots</a></p>
       <Fragment set:html={todayPage.html} />
     </article>
