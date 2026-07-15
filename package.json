@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "astro dev --host 127.0.0.1 --port 4321",
-    "build": "astro build",
+    "test:date": "node --experimental-strip-types --test src/lib/date.test.ts",
+    "build": "npm run test:date && astro build && node scripts/check-built-today-date.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "astro": "astro"
   },

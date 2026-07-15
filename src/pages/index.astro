@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { newYorkDateLabel, newYorkDateStamp } from '../lib/date';
 import {
   loadAllArticles,
   getTypeCounts,
@@ -18,12 +19,11 @@ const recentlyUpdated = getRecentlyUpdated(8);
 const featured = getFeaturedArticle();
 const heroPhoto = getLatestUploadHero();
 
-// Today block
+// Today block — always anchored to Leigh's local day, including UTC CI runners.
 const todayDate = new Date();
 const todayPage = getTodayPage(todayDate);
-
-function pad2(n: number): string { return n < 10 ? `0${n}` : String(n); }
-const todayStamp = `${todayDate.getFullYear()}-${pad2(todayDate.getMonth() + 1)}-${pad2(todayDate.getDate())}`;
+const todayStamp = newYorkDateStamp(todayDate);
+const todayLabel = newYorkDateLabel(todayDate);
 
 // Extract briefing first paragraph from today's bodyMd
 function extractBriefingParagraph(bodyMd: string): string {
@@ -81,11 +81,6 @@ const todayBriefing = todayPage
   ? (extractBriefingParagraph(todayPage.bodyMd) || todayPage.firstParagraph)
   : '';
 const todayStats = todayPage ? extractTodayStats(todayPage.bodyMd) : null;
-
-// Format today's date as "Wednesday April 29 2026"
-const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const todayLabel = `${dayNames[todayDate.getDay()]} ${monthNames[todayDate.getMonth()]} ${todayDate.getDate()} ${todayDate.getFullYear()}`;
 
 const categoriesForBrowse = typeCounts
   .map(tc => ({

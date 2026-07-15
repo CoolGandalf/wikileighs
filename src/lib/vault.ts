@@ -4,6 +4,7 @@ import fg from 'fast-glob';
 import matter from 'gray-matter';
 import { Marked } from 'marked';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
+import { newYorkDateStamp } from './date';
 
 const VAULT_ROOT = process.env.VAULT_ROOT;
 if (!VAULT_ROOT) {
@@ -737,9 +738,7 @@ function formatYMDCompact(d: Date): string {
 }
 
 function formatYMDDashed(d: Date): string {
-  // America/New_York anchors "today" to Leigh's day, not the build runner's
-  // (GitHub Actions runs in UTC). en-CA produces YYYY-MM-DD natively.
-  return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  return newYorkDateStamp(d);
 }
 
 function renderMarkdownStandalone(md: string): string {
