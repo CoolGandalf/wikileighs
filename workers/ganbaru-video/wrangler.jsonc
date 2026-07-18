@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "wikileighs-ganbaru-video",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-07-18",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "lgl.gg/wikileighs/ganbaru-video/*",
+      "zone_name": "lgl.gg"
+    }
+  ]
+}

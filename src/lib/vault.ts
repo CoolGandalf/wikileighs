@@ -18,6 +18,28 @@ if (!VAULT_ROOT) {
 const NOTES_ROOT = path.join(VAULT_ROOT, 'notes');
 const VOICE_MEMO_ROOT = path.join(VAULT_ROOT, 'journal', 'personal');
 const MIN_VOICE_MEMO_WORDS = 20;
+const GANBARU_CDN_HOST = 'vz-ef9c225d-d9c.b-cdn.net';
+const GANBARU_VIDEO_ID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+
+/**
+ * Raw Ganbaru HLS links reject WikiLeighs' Referer. Route them through the
+ * Cloudflare Access-protected player instead; the Worker supplies the upstream
+ * Referer server-side and never exposes account credentials.
+ */
+export function rewriteGanbaruVideoLinks(md: string): string {
+  const linked = new RegExp(
+    `\\[([^\\]]+)\\]\\(https://${GANBARU_CDN_HOST}/(${GANBARU_VIDEO_ID})/playlist\\.m3u8\\)`,
+    'gi',
+  );
+  const bare = new RegExp(
+    `https://${GANBARU_CDN_HOST}/(${GANBARU_VIDEO_ID})/playlist\\.m3u8`,
+    'gi',
+  );
+  const base = `${import.meta.env.BASE_URL}ganbaru-video/`;
+  return md
+    .replace(linked, (_match, _label, id) => `[▶ Play demo](${base}${id})`)
+    .replace(bare, (_match, id) => `${base}${id}`);
+}
 
 function humanizeVoiceMemoTitle(baseName: string): string {
   const m = baseName.match(/^(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})/);
@@ -415,6 +437,8 @@ function getCache() {
     const outbound = new Set<string>();
     const links = extractWikilinks(article.bodyMd);
     let md = article.bodyMd;
+
+    md = rewriteGanbaruVideoLinks(md);
 
     md = md.replace(/\[\[([^\]]+)\]\]/g, (_, inner) => {
       const [targetPart, alias] = inner.split('|');
