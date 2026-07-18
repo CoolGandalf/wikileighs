@@ -49,11 +49,38 @@ button { color: inherit; }
 .primary-button { border: 0; background: var(--ink); color: white; padding: 12px 16px; font: 650 12px/1 var(--font-geist-mono), monospace; cursor: pointer; display: inline-flex; gap: 9px; align-items: center; transition: transform .18s ease, background .18s ease; }
 .primary-button:hover { background: #353535; transform: translateY(-1px); }
 
-.hero { padding: 62px 34px 42px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(390px, .75fr); gap: 70px; align-items: end; border-bottom: 1px solid var(--line); }
-.kicker, .drawer-kicker { margin: 0 0 20px; font: 650 11px/1.2 var(--font-geist-mono), monospace; letter-spacing: .1em; color: var(--muted); }
-.hero h1 { margin: 0; font-size: clamp(58px, 7.4vw, 116px); line-height: .82; letter-spacing: -.075em; font-weight: 730; }
-.hero h1 em { color: var(--orange); font-family: Georgia, serif; font-weight: 400; }
-.hero-description { max-width: 620px; margin: 30px 0 0; font-size: 17px; line-height: 1.55; color: #4e4c47; }
+.hero {
+  position: relative;
+  min-height: 420px;
+  padding: 31px 34px 0;
+  display: grid;
+  grid-template-columns: minmax(680px, 1.6fr) minmax(390px, .7fr);
+  gap: 54px;
+  border-bottom: 1px solid var(--ink);
+  background-image: linear-gradient(rgba(19,19,19,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(19,19,19,.07) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.hero::before { content: "0          120          240          360          480          600          720          840"; position: absolute; left: 34px; right: 34px; top: 13px; overflow: hidden; white-space: pre; color: rgba(19,19,19,.38); font: 400 8px/1 var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.foundation-plan { position: relative; display: grid; grid-template-rows: auto 1fr auto; min-width: 0; border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); }
+.foundation-plan::after { content: ""; position: absolute; inset: 0 25% 0 auto; border-left: 1px solid var(--line); pointer-events: none; }
+.kicker, .drawer-kicker { margin: 0; font: 650 10px/1.2 var(--font-geist-mono), monospace; letter-spacing: .1em; color: var(--muted); }
+.foundation-plan .kicker { padding: 15px 18px 13px; border-bottom: 1px solid var(--ink); background: var(--paper); }
+.foundation-structure { min-width: 0; }
+.foundation-beam { position: relative; margin-top: 21px; padding: 19px 22px 23px; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; color: var(--paper); background: var(--ink); box-shadow: 0 5px 0 rgba(19,19,19,.18); }
+.foundation-beam::before, .foundation-beam::after { content: ""; position: absolute; bottom: -14px; width: 1px; height: 14px; background: var(--ink); }
+.foundation-beam::before { left: 25%; }
+.foundation-beam::after { right: 25%; }
+.foundation-beam h1 { margin: 0; font-size: clamp(68px, 7.9vw, 124px); line-height: .76; letter-spacing: -.075em; font-weight: 560; }
+.foundation-beam > span { flex: 0 0 auto; padding-bottom: 4px; color: #bbb8b0; text-align: right; font: 500 9px/1.4 var(--font-geist-mono), monospace; letter-spacing: .07em; text-transform: uppercase; }
+.foundation-columns { position: relative; min-height: 112px; margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: rgba(238,234,224,.88); }
+.foundation-columns::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), var(--ink) calc(25% - 1px), var(--ink) 25%); pointer-events: none; }
+.foundation-columns p { position: relative; z-index: 1; grid-column: 1 / -1; margin: 0; padding: 0 18px; font: 400 clamp(27px, 2.35vw, 38px)/1.05 Georgia, "Times New Roman", serif; letter-spacing: -.035em; white-space: nowrap; }
+.foundation-columns i { position: absolute; z-index: 1; left: 18px; bottom: 8px; color: var(--orange); font: 650 9px/1 var(--font-geist-mono), monospace; letter-spacing: .12em; font-style: normal; }
+.foundation-baseline { height: 41px; padding: 10px 18px 0; display: flex; align-items: flex-start; justify-content: space-between; border-top: 1px solid var(--ink); background: var(--paper); color: var(--muted); font: 500 8px/1 var(--font-geist-mono), monospace; letter-spacing: .07em; text-transform: uppercase; }
+.foundation-baseline b { color: var(--orange); }
+.hero-summary { align-self: end; margin-bottom: 40px; background: rgba(238,234,224,.9); }
+.summary-label { margin: 0 0 16px; color: var(--muted); font: 650 9px/1 var(--font-geist-mono), monospace; letter-spacing: .1em; }
+.hero-description { max-width: 390px; margin: 18px 0 0; font-size: 13px; line-height: 1.5; color: #4e4c47; }
 .stats { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--ink); }
 .stats div { padding: 20px 14px 16px 0; border-bottom: 1px solid var(--line); }
 .stats div:nth-child(even) { border-left: 1px solid var(--line); padding-left: 22px; }
@@ -193,7 +220,8 @@ button { color: inherit; }
 @media (max-width: 1100px) {
   .workspace-nav { order: 3; position: absolute; left: 0; right: 0; top: 67px; height: 44px; background: rgba(238,234,224,.96); border-bottom: 1px solid var(--line); padding: 0 24px; overflow-x: auto; }
   .workspace-topbar { margin-bottom: 44px; }
-  .hero { grid-template-columns: 1fr; gap: 42px; }
+  .hero { grid-template-columns: 1fr; gap: 28px; }
+  .hero-summary { margin: 0 0 34px; max-width: 680px; }
   .stats { max-width: 680px; }
   .board { overflow-x: auto; grid-template-columns: repeat(4, minmax(300px, 1fr)); }
   .column { min-width: 300px; }
@@ -209,9 +237,16 @@ button { color: inherit; }
   .workspace-nav a { padding: 0 9px; }
   .local-badge { display: none; }
   .primary-button { padding: 11px 12px; }
-  .hero { padding: 44px 18px 32px; }
-  .hero h1 { font-size: 60px; }
-  .hero-description { font-size: 14px; }
+  .hero { min-height: 0; padding: 31px 18px 0; }
+  .hero::before { left: 18px; right: 18px; }
+  .foundation-beam { padding: 18px 14px 20px; }
+  .foundation-beam h1 { font-size: 56px; }
+  .foundation-beam > span { display: none; }
+  .foundation-columns { min-height: 120px; }
+  .foundation-columns p { padding: 0 11px; font-size: 22px; white-space: normal; }
+  .foundation-baseline { padding-left: 11px; padding-right: 11px; gap: 16px; }
+  .foundation-baseline span:last-child { text-align: right; }
+  .hero-description { font-size: 13px; }
   .controls { padding: 14px 18px; flex-wrap: wrap; }
   .search-field { width: 100%; }
   .text-button { margin-left: auto; }

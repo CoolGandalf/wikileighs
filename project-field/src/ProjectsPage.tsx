@@ -302,20 +302,36 @@ export function ProjectsPage() {
 
   return (
     <main className="app-shell">
-      <WorkspaceNav active="projects" action={<button className="primary-button" onClick={() => setShowAdd(true)}><span>ï¼‹</span> Add project</button>} />
+      <WorkspaceNav active="projects" action={<button className="primary-button" onClick={() => setShowAdd(true)}><span>＋</span> Add project</button>} />
 
       <section className="hero" id="top">
-        <div className="hero-copy">
-          <p className="kicker">LEIGH'S ACTIVE PROJECT SYSTEM · JULY 2026</p>
-          <h1>Make the work<br /><em>visible.</em></h1>
-          <p className="hero-description">A living view of everything in motion—seeded from your vault and the projects you’ve actually touched lately.</p>
+        <div className="foundation-plan">
+          <p className="kicker">LEIGH'S ACTIVE PROJECT SYSTEM · JULY 2026 / SHEET A—01</p>
+          <div className="foundation-structure">
+            <div className="foundation-beam">
+              <h1>Foundation</h1>
+              <span>Primary structure<br />Load-bearing idea</span>
+            </div>
+            <div className="foundation-columns" aria-label="Everything's Built on Something">
+              <p>Everything's Built on Something</p>
+              <i>01 / DATUM</i>
+            </div>
+          </div>
+          <div className="foundation-baseline">
+            <span><b>▲</b> measured baseline</span>
+            <span>projects / agents / tools / knowledge</span>
+          </div>
         </div>
-        <div className="stats" aria-label="Board summary">
-          <div><strong>{focusCount}</strong><span>focus slots</span></div>
-          <div><strong>{projects.length}</strong><span>projects tracked</span></div>
-          <div><strong>{averageProgress}%</strong><span>overall motion</span></div>
-          <div><strong>{shippedCount}</strong><span>shipped</span></div>
-        </div>
+        <aside className="hero-summary">
+          <p className="summary-label">LIVE STRUCTURE / PORTFOLIO READOUT</p>
+          <div className="stats" aria-label="Board summary">
+            <div><strong>{focusCount}</strong><span>focus slots</span></div>
+            <div><strong>{projects.length}</strong><span>projects tracked</span></div>
+            <div><strong>{averageProgress}%</strong><span>motion score</span></div>
+            <div><strong>{shippedCount}</strong><span>shipped</span></div>
+          </div>
+          <p className="hero-description">A living view of everything in motion—seeded from your vault and the projects you've actually touched lately.</p>
+        </aside>
       </section>
 
       <section className="controls" aria-label="Board controls">
@@ -392,7 +408,7 @@ export function ProjectsPage() {
                   </article>
                 ))}
                 {items.length === 0 && (
-                  <div className="empty-column"><span>ï¼‹</span><p>Drop a project here</p></div>
+                  <div className="empty-column"><span>＋</span><p>Drop a project here</p></div>
                 )}
               </div>
             </section>
