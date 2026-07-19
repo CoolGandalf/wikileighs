@@ -16,7 +16,13 @@ export type DirectoryItem = {
   color: string;
   sections: DirectorySection[];
   source?: string;
+  // "builtin" items are ambient capabilities baked into Codex/Claude that Leigh
+  // never invokes by name. They are hidden from the default view and every normal
+  // family filter, and only surface under the dedicated "Built-in" pill.
+  tier?: "primary" | "builtin";
 };
+
+const BUILTIN = "Built-in";
 
 type DirectoryPageProps = {
   active: "agents" | "tools" | "skills" | "knowledge";
@@ -34,16 +40,29 @@ export function DirectoryPage({ active, kicker, title, accent, description, item
   const [group, setGroup] = useState("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const groups = useMemo(() => ["All", ...Array.from(new Set(items.map((item) => item.group))).sort()], [items]);
+  const isBuiltin = (item: DirectoryItem) => item.tier === "builtin";
+  const primaryItems = useMemo(() => items.filter((item) => !isBuiltin(item)), [items]);
+  const builtinCount = items.length - primaryItems.length;
+
+  const groups = useMemo(() => {
+    const base = ["All", ...Array.from(new Set(primaryItems.map((item) => item.group))).sort()];
+    return builtinCount > 0 ? [...base, BUILTIN] : base;
+  }, [primaryItems, builtinCount]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return items.filter((item) => {
       const haystack = `${item.name} ${item.eyebrow} ${item.status} ${item.group} ${item.summary} ${item.tags.join(" ")}`.toLowerCase();
-      return (group === "All" || item.group === group) && (!needle || haystack.includes(needle));
+      const scope =
+        group === BUILTIN ? isBuiltin(item)
+        : group === "All" ? !isBuiltin(item)
+        : item.group === group && !isBuiltin(item);
+      return scope && (!needle || haystack.includes(needle));
     });
   }, [group, items, query]);
+
   const selected = items.find((item) => item.id === selectedId) ?? null;
-  const activeCount = items.filter((item) => /active|live|connected|installed|ready/i.test(item.status)).length;
+  const activeCount = primaryItems.filter((item) => /active|live|connected|installed|ready/i.test(item.status)).length;
 
   return (
     <main className="app-shell directory-shell" style={{ "--page-accent": accent } as React.CSSProperties}>
@@ -56,9 +75,10 @@ export function DirectoryPage({ active, kicker, title, accent, description, item
           <p>{description}</p>
         </div>
         <div className="directory-stats">
-          <div><strong>{items.length}</strong><span>{statLabel}</span></div>
+          <div><strong>{primaryItems.length}</strong><span>{statLabel}</span></div>
           <div><strong>{activeCount}</strong><span>ready now</span></div>
-          <div><strong>{groups.length - 1}</strong><span>families</span></div>
+          <div><strong>{groups.length - 1 - (builtinCount > 0 ? 1 : 0)}</strong><span>families</span></div>
+          {builtinCount > 0 && <div><strong>{builtinCount}</strong><span>built-in</span></div>}
         </div>
       </section>
 
@@ -68,10 +88,25 @@ export function DirectoryPage({ active, kicker, title, accent, description, item
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${title.toLowerCase()}, capabilities, tags…`} aria-label={`Search ${title.toLowerCase()}`} />
         </label>
         <div className="filter-pills" role="group" aria-label="Filter by family">
-          {groups.map((item) => <button className={group === item ? "active" : ""} onClick={() => setGroup(item)} key={item}>{item}</button>)}
+          {groups.map((item) => {
+            const builtin = item === BUILTIN;
+            return (
+              <button
+                className={`${group === item ? "active" : ""}${builtin ? " builtin-pill" : ""}`}
+                onClick={() => setGroup(item)}
+                key={item}
+              >
+                {builtin ? `${BUILTIN} · ${builtinCount}` : item}
+              </button>
+            );
+          })}
         </div>
         <span className="result-count">{filtered.length} visible</span>
       </section>
+
+      {group === BUILTIN && (
+        <p className="builtin-note">Ambient capabilities baked into Codex and Claude — always available, rarely invoked by name. Tucked away so the library up top stays yours.</p>
+      )}
 
       <section className="directory-grid" aria-label={`${title} directory`}>
         {filtered.map((item, index) => (
