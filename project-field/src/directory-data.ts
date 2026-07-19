@@ -138,6 +138,18 @@ export const agents: DirectoryItem[] = [
     source: "C:\\Users\\leigh\\projects\\vault\\notes\\projects\\mungo.md",
   },
   {
+    id: "bogle", name: "Bogle", eyebrow: "HOUSEHOLD CFO / FINANCIAL PLANNING", status: "Live", group: "Hermes Cabinet", color: "#d9ff67", metric: "Telegram topic · spun from Malcolm",
+    summary: "The counsel seat for major household-capital and protection decisions — deployment, retirement, insurance, estate, tax.",
+    detail: "Named for Jack Bogle—low-cost index investing, evidence over hype, stay the course—a doctrine that actually fits Leigh. Spun out of Malcolm on July 18 to own the big planning calls, each with a sourced recommendation, a logged decision, and an approval gate.",
+    tags: ["Hermes", "Finance", "Planning", "Household-CFO"],
+    sections: [
+      section("Mandate", "Capital deployment — SPAXX, house fund, idle cash", "Retirement structure and tax posture", "Insurance adequacy and estate & beneficiaries", "Every big call ships with a sourced recommendation, a logged decision, and an approval gate"),
+      section("Division with Malcolm", "Bogle: planning, big capital, and protection decisions", "Malcolm: reporting, net-worth snapshots, cash flow, and reconciliation", "Grounded in the bogle-corpus (Bogleheads / White Coat Investor doctrine)"),
+      section("Surface", "Skill: ~/.hermes/skills/personal-agents/bogle/SKILL.md", "Dedicated Telegram topic bound to the bogle skill", "Authored by Fable (macbookair/claude) on 2026-07-18")
+    ],
+    source: "Hermes · personal-agents/bogle",
+  },
+  {
     id: "car-scout", name: "Car Scout", eyebrow: "GOOD-VALUE USED-CAR SPECIALIST", status: "Live · On demand", group: "On-demand Specialists", color: "#d9ff67", metric: "Exactly 5 ranked cars",
     summary: "A live specialist that finds and verifies five strong used-car options ranked by quality for price.",
     detail: "Car Scout is not part of the seven-agent core cabinet, but it is a real live specialist available through the active Hermes agent or profile. It distinguishes agent-found listings from Leigh-provided listings and verifies the details behind every recommendation.",
@@ -148,6 +160,18 @@ export const agents: DirectoryItem[] = [
       section("Evidence boundary", "Marketplace deal ratings are not accepted as evidence", "Links, parts, trim, mileage, condition, and price claims must be verified", "Runs on demand through whichever live agent or profile invokes the skill")
     ],
     source: "Live MacBook Hermes audit · 2026-07-18",
+  },
+  {
+    id: "del-boy", name: "Del Boy", eyebrow: "BUYING AGENT / BEST-VALUE SPECIALIST", status: "Live · On demand", group: "On-demand Specialists", color: "#ffb85c", metric: "3 modes · runs on Opus",
+    summary: "Leigh's buying agent — best price on decided purchases, the better product behind an ad, and the daily deals sweep.",
+    detail: "Derek \"Del Boy\" Trotter of Trotters Independent Traders, reborn as a buying agent: market-trader patter over rigorous, verified research. He optimizes for value, not cheapness, and refuses to pass Leigh a dodgy deal.",
+    tags: ["Buying", "Deals", "Claude", "Opus"],
+    sections: [
+      section("Three modes", "Better Price — get a decided purchase cheaper, verified", "Better Product — find the higher-value pick behind an ad", "Deal Sweep — daily substantial-deals run (≥$50 and ≥25% off a verified typical price)"),
+      section("Runtime", "Claude agent: ~/.claude/agents/del-boy.md (Opus)", "Knowledge base: notes/bargain-hunting-playbook.md", "Daily sweep script: scripts/del-boy/deal-sweep.sh", "Reports delivered via am-send"),
+      section("Evidence boundary", "Value over cheapness — best quality for the money", "Verify every price, spec, and claim before recommending", "Say so plainly when a deal isn't genuinely good")
+    ],
+    source: "Claude agent · ~/.claude/agents/del-boy.md",
   },
   { ...legacyAgents.find((agent) => agent.id === "bob")!, group: "Personal Agents" },
   { ...legacyAgents.find((agent) => agent.id === "deckhand")!, group: "Personal Agents" },
@@ -210,6 +234,7 @@ const fleetSkills: DirectoryItem[] = [
   // — Cabinet: persona invocations —
   skill("giles", "Giles · Librarian", "Cabinet", "Curates the vault — ingest, backlinks, orphan and contradiction repair, weekly shelf report.", ["/giles", "run the librarian", "audit the vault for gaps", "migrate quotes"], "Fronts the Librarian skill: processes the inbox, fixes backlinks and indexes, and repairs registry drift before it becomes agent confusion.", "Hermes · personal-agents/giles"),
   skill("malcolm", "Malcolm the Monarch", "Cabinet", "Finance exception auditor — card benefits, expiring credits, cash flow, portfolio.", ["card-benefit audit", "check household finance", "portfolio review"], "Weekly card-benefit and expiring-credit audit, cash-flow monitoring, and allocation work when source data is available.", "Hermes · personal-agents/malcolm-the-monarch"),
+  skill("bogle", "Bogle", "Cabinet", "Household CFO — the counsel seat for big capital and protection decisions.", ["financial planning", "capital deployment", "insurance / estate review"], "Owns retirement structure, capital deployment, insurance, estate, and tax posture — each with a sourced recommendation, a logged decision, and an approval gate. Malcolm reports; Bogle decides.", "Hermes · personal-agents/bogle"),
   skill("goggins", "Goggins", "Cabinet", "Fitness coach — training pressure grounded in real recovery, plus NYC class scouting.", ["training nudge", "find a movement class", "accountability check"], "Applies pressure tied to what Leigh can actually recover from, and scouts bookable NYC movement classes biweekly.", "Hermes · personal-agents/goggins"),
   skill("cortana", "Cortana", "Cabinet", "Chief-of-staff and thinking partner for priorities, calendar, tasks, and research.", ["/cortana", "be my Cortana", "life-management session"], "Steps into the Cortana persona for life-management sessions — triage, planning, and opinionated counsel.", "Claude Code · skills/cortana"),
   skill("mungo", "mungo", "Cabinet", "Divergent-thinking partner with ten brainstorming modes.", ["/mungo", "brainstorm this", "remix an idea"], "Runs modes like Wander, SCAMPER, Oblique, Gap, and Six Hats to widen the option set before a consequential choice.", "Hermes/Claude · profiles/mungo"),
@@ -234,6 +259,7 @@ const fleetSkills: DirectoryItem[] = [
   skill("cashflow", "Cashflow & Spending", "Finance", "Cash-flow, spending, and financial-summary reports.", ["/cashflow", "/spending-report", "/financial-summary"], "Malcolm- and Bogle-backed: pulls finance evidence and produces cash-flow and spending readouts grounded in Bogle household-CFO doctrine.", "Slash commands · Hermes Malcolm / Bogle"),
 
   // — Buying (Del Boy) —
+  skill("del-boy", "Del Boy", "Buying", "Leigh's buying agent — best price, the better product behind an ad, and the daily deals sweep.", ["/del-boy", "find this cheaper", "is there something better", "run the deals"], "Derek Trotter's patter over verified research: optimizes for value, not cheapness, and won't pass Leigh a dodgy deal. The persona umbrella over the Buying skills below.", "Claude agent · ~/.claude/agents/del-boy.md"),
   skill("deal-sweep", "Deal Sweep", "Buying", "Daily substantial-deals sweep — big deals only (≥$50 and ≥25% off).", ["run the deals", "/deal-sweep", "what deals are on"], "Del Boy checks the wishlist, category scans, and cashback stacking on the live web, then emails the finds via am-send.", "Claude Code · skills/deal-sweep"),
   skill("better-price", "Better Price · Better Product", "Buying", "Finds a product cheaper, or a higher-quality alternative to an ad.", ["find this cheaper", "is this a good deal", "is there something better"], "Verifies the listing, then hunts a lower verified price or a genuinely better product behind the ad.", "Claude Code · better-price + better-product"),
   skill("car-scout", "Car Scout", "Buying", "Exactly five verified good-value used cars, ranked by quality for price.", ["find me a used car", "refresh the car shortlist", "best value used cars"], "Finds and ranks five cars optimizing quality-for-price, with every listing detail verified and delivered spreadsheet-ready.", "Hermes · automotive/good-value-used-cars"),
