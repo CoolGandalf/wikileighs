@@ -931,3 +931,8 @@ body {
 /* mini-drop dispatch strip */
 .greene-lesson > blockquote { border: none; border-top: 1px solid var(--gl-rule); border-bottom: 1px solid var(--gl-rule); background: transparent; margin: 0 0 1.5rem; padding: .9rem .2rem; font-size: .88rem; color: #5a5348; font-style: italic; }
 .greene-lesson > blockquote strong { color: var(--gl-gold); font-style: normal; font-size: .72rem; letter-spacing: .28em; text-transform: uppercase; }
+
+/* lesson audio player */
+.gl-audio { margin: 0 0 1.8rem; padding: 1rem 1.2rem; border: 1px solid var(--gl-rule); background: #fffdf8; }
+.gl-audio .gl-audio-label { display: block; font-size: .72rem; letter-spacing: .26em; text-transform: uppercase; color: var(--gl-crimson); margin-bottom: .6rem; }
+.gl-audio audio { width: 100%; }
