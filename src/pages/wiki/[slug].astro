@@ -24,6 +24,7 @@ if (!article) {
   return Astro.redirect(`${BASE_URL}missing?title=` + encodeURIComponent(slug || ''));
 }
 
+const isGreeneLesson = article.tags.includes('greene-semester') && article.tags.includes('lesson');
 const infoboxPairs = getInfoboxAsPairs(article);
 const incoming = getIncomingLinks(article.slug).slice(0, 12);
 const hasPortraitInfobox = article.type === 'person' || article.type === 'figure';
@@ -80,8 +81,8 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
     <a class="suggest-edit" href={editMailto} title="Email Leigh a suggested change for this page">✎ Suggest edit</a>
   </nav>
 
-  <article class="article-body">
-    <h1>{article.title}</h1>
+  <article class={isGreeneLesson ? 'article-body greene-lesson' : 'article-body'}>
+    {!isGreeneLesson && <h1>{article.title}</h1>}
 
     <StubBanner article={article} />
 
@@ -91,7 +92,7 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
       </figure>
     )}
 
-    {(infoboxPairs.length > 0 || hasPortraitInfobox) && (
+    {!isGreeneLesson && (infoboxPairs.length > 0 || hasPortraitInfobox) && (
       <aside class="infobox" aria-label="Infobox">
         <div class="infobox-header">{article.title}</div>
         {hasPortraitInfobox && (
@@ -125,7 +126,7 @@ if (article.updated && article.updated !== article.created) breadcrumbBits.push(
       </aside>
     )}
 
-    {article.toc.length >= 2 && (
+    {!isGreeneLesson && article.toc.length >= 2 && (
       <div class="toc-box" style="float: none; clear: none; margin-bottom: 1rem;">
         <div class="toc-box-title">Contents</div>
         <ol>
