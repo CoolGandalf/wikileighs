@@ -936,3 +936,18 @@ body {
 .gl-audio { margin: 0 0 1.8rem; padding: 1rem 1.2rem; border: 1px solid var(--gl-rule); background: #fffdf8; }
 .gl-audio .gl-audio-label { display: block; font-size: .72rem; letter-spacing: .26em; text-transform: uppercase; color: var(--gl-crimson); margin-bottom: .6rem; }
 .gl-audio audio { width: 100%; }
+
+/* --- expandable aperture (would you like to know more) --- */
+.greene-lesson details.gl-more { border: 1px solid var(--gl-rule); background: #fffdf8; margin: 1.4rem 0; padding: 0; }
+.greene-lesson details.gl-more > summary { cursor: pointer; padding: .85rem 1.3rem; font-size: .78rem; letter-spacing: .28em; text-transform: uppercase; color: var(--gl-crimson); list-style: none; user-select: none; }
+.greene-lesson details.gl-more > summary::before { content: "❧  "; letter-spacing: 0; }
+.greene-lesson details.gl-more > summary:hover { background: rgba(164,31,19,.05); }
+.greene-lesson details.gl-more[open] > summary { border-bottom: 1px solid var(--gl-rule); }
+.greene-lesson details.gl-more .gl-more-body { padding: 1.1rem 1.5rem 1.3rem; font-size: .97rem; }
+.greene-lesson details.gl-more .gl-more-body blockquote { border-left: 2px solid var(--gl-gold); margin: .8rem 0; padding: .2rem 0 .2rem 1rem; font-style: italic; color: #4a443c; }
+
+/* --- seminar record (accreted takeaways) --- */
+.gl-seminar { border: 1.5px solid var(--gl-gold); background: #fcf9f0; padding: 1.4rem 1.7rem; margin: 2rem 0; }
+.gl-seminar .gl-seminar-head { font-size: .72rem; letter-spacing: .32em; text-transform: uppercase; color: var(--gl-gold); margin-bottom: .8rem; }
+.gl-seminar .gl-entry { border-top: 1px solid var(--gl-rule); padding: .7rem 0 .3rem; font-size: .95rem; }
+.gl-seminar .gl-entry-date { font-size: .7rem; letter-spacing: .2em; color: var(--gl-gold); text-transform: uppercase; margin-right: .6em; }
