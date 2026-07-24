@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "astro dev --host 127.0.0.1 --port 4321",
     "test:date": "node --experimental-strip-types --test src/lib/date.test.ts",
+    "test:constellation": "node --experimental-strip-types --test src/lib/constellation.test.ts",
     "build:project-field": "vite build --config project-field/vite.config.ts",
-    "build": "npm run test:date && npm run build:project-field && astro build && node scripts/check-built-today-date.mjs",
+    "build": "npm run test:date && npm run test:constellation && npm run build:project-field && astro build && node scripts/check-built-today-date.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "astro": "astro"
   },
