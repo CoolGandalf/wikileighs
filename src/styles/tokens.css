@@ -1,0 +1,25 @@
+/* Constellation design tokens — spec §2. Single source of truth. */
+:root {
+  --ink: #0b0e14;
+  --raised: #12161f;
+  --lifted: #1a1f2b;
+  --gold: #e8c66a;
+  --gold-soft: rgba(232, 198, 106, 0.4);
+  --gold-hairline: rgba(232, 198, 106, 0.18);
+  --verdigris: #6fd3c7;
+  --verdigris-soft: rgba(111, 211, 199, 0.35);
+  --t-heading: #f2efe6;
+  --t-body: #d5d2c8;
+  --t-secondary: #b5b0a4;
+  --t-muted: #8b93a5;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-serif: "Newsreader", Georgia, serif;
+}
+/* Grain: every surface carries it via this utility (spec: nothing renders flat) */
+.grain {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,3 +1,11 @@
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+@import '@fontsource/newsreader/400.css';
+@import '@fontsource/newsreader/400-italic.css';
+@import '@fontsource/newsreader/500.css';
+@import './tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,28 +21,28 @@
 .tabs .suggest-edit:hover { opacity: 1; text-decoration: underline; }
 
 :root {
-  --color-text: #202122;
-  --color-muted: #54595d;
-  --color-link: #3366cc;
-  --color-link-visited: #795cb2;
-  --color-link-broken: #ba0000;
-  --color-border: #a2a9b1;
-  --color-border-light: #c8ccd1;
-  --color-bg: #ffffff;
-  --color-rail: #f8f9fa;
-  --color-infobox: #f8f9fa;
-  --color-accent: #6b46c1;
-  --color-accent-dark: #553c9a;
-  --color-chrome: #eaecf0;
-  --font-serif: "Linux Libertine", Georgia, "Times New Roman", serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --color-text: var(--t-body);
+  --color-muted: var(--t-muted);
+  --color-link: var(--gold);
+  --color-link-visited: var(--gold);
+  --color-link-broken: var(--t-muted);
+  --color-border: var(--gold-hairline);
+  --color-border-light: rgba(139, 147, 165, 0.2);
+  --color-bg: var(--ink);
+  --color-rail: var(--raised);
+  --color-infobox: var(--raised);
+  --color-accent: var(--gold);
+  --color-accent-dark: var(--gold);
+  --color-chrome: var(--raised);
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-sans: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 
-html { background: #f6f6f6; }
+html { background: var(--ink); }
 
 body {
-  color: var(--color-text);
-  font-family: var(--font-sans);
+  color: var(--t-body);
+  font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.6;
 }
