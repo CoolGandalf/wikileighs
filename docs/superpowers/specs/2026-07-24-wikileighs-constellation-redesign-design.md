@@ -49,7 +49,7 @@ Neutrals: `#F2EFE6` (headings), `#D5D2C8` (body), `#B5B0A4` (secondary), `#8B93A
 ## 3. Homepage — the Constellation
 
 - Full-viewport night sky. **Every page is a star** (1,362): position computed at build time from a deterministic hash of the slug, clustered by category; positions stable across builds.
-- **Gold glow** = touched within 7 days (from git log at build). **Verdigris** = journal/time pages. Standard pages = faint white points.
+- **Gold glow** = updated within 7 days, computed from each page's frontmatter `updated:` field (NOT git log — the deploy workflow checks out the vault with `fetch-depth: 1`, so git history doesn't exist in CI; frontmatter works identically locally and deployed). **Verdigris** = journal/time pages. Standard pages = faint white points.
 - Cluster labels (`PROJECTS · 214`, etc.) are clickable → category pages.
 - **Command palette front and center**: type → live-filtered results (existing search index) → Enter opens. ⌘K/Ctrl-K summons it site-wide.
 - Hover star = title tooltip; click = open page.
@@ -76,9 +76,9 @@ Neutrals: `#F2EFE6` (headings), `#D5D2C8` (body), `#B5B0A4` (secondary), `#8B93A
 
 ## 6. Other Pages
 
-- **/category/[type]**: dense mono index rows (title · updated · one-line excerpt), Recent/A–Z orders pre-built as tabs. **`project` keeps its status buckets** (Active / In progress / Paused / Planned / Shipped / Archived — the 2026-04-26 feature). Header links to "its stars on the sky."
+- **/category/[type]**: dense mono index rows (title · updated · one-line excerpt), Recent/A–Z orders pre-built as tabs. **`project` keeps its status buckets exactly as implemented in category/[type].astro** (Active / In progress / Paused / Planned–Ideas / Shipped–Complete / Archived / **Other–Unstatused catch-all** — the 2026-04-26 feature; the catch-all matters, dropping it silently hides unstatused projects). Header links to "its stars on the sky."
 - **/today**: verdigris domain. Daily illustration (existing `attachments/today-photos/<date>` convention) as a right-side wash under a dark gradient; prev/next day + archive nav; calendar/reminders/vault-activity as raised panels. **Archive**: calendar grid, verdigris dot per written day, thumbnail per illustrated day.
-- **/gaps** — "The unlit sky": stubs (unwritten stars), orphans (unlinked), broken links, each row linking to page + source; 12-month growth strip (build-time, dataviz-skill styling). **Element/anchor IDs stay stable** — Giles's audits parse this page.
+- **/gaps** — "The unlit sky": **all four existing sections** — stubs (unwritten stars), orphans (unlinked), broken links, and stale active projects (`#stale`, present in current gaps.astro) — each row linking to page + source; 12-month growth strip (build-time, dataviz-skill styling). **Element/anchor IDs (`#stubs`/`#orphans`/`#broken`/`#stale`) stay stable** — cheap insurance for any automation that parses this page.
 - **/tag/[tag]**: same flat mono index as categories.
 - 404: empty sky + palette ("that star isn't charted yet").
 
@@ -96,7 +96,7 @@ Neutrals: `#F2EFE6` (headings), `#D5D2C8` (body), `#B5B0A4` (secondary), `#8B93A
 1. `✎ suggest edit` mailto → `[cc:Mac] WikiLeighs edit: <title>` routing
 2. `attachments/today-photos/<date>` hero convention on today pages
 3. Project category status buckets & their bucket order
-4. `/gaps` data + stable IDs (Giles dependency)
+4. `/gaps` — all four sections (`#stubs`/`#orphans`/`#broken`/`#stale`) + stable IDs
 5. Search index contents/scoring; all existing URLs & slugs unchanged; `noindex` metas; Cloudflare Access flow
 
 ## 9. Rollout
