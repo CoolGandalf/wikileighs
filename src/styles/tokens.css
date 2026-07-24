@@ -12,6 +12,7 @@
   --t-body: #d5d2c8;
   --t-secondary: #b5b0a4;
   --t-muted: #8b93a5;
+  --t-muted-soft: rgba(139, 147, 165, 0.2);
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
   --font-serif: "Newsreader", Georgia, serif;
 }
@@ -20,6 +21,7 @@
   background-image: radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px);
   background-size: 3px 3px;
 }
+/* Reaches CSS only — canvas/JS animation must self-check matchMedia. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

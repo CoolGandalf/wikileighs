@@ -27,15 +27,14 @@
   --color-link-visited: var(--gold);
   --color-link-broken: var(--t-muted);
   --color-border: var(--gold-hairline);
-  --color-border-light: rgba(139, 147, 165, 0.2);
+  --color-border-light: var(--t-muted-soft);
   --color-bg: var(--ink);
   --color-rail: var(--raised);
   --color-infobox: var(--raised);
   --color-accent: var(--gold);
   --color-accent-dark: var(--gold);
   --color-chrome: var(--raised);
-  --font-serif: "Newsreader", Georgia, serif;
-  --font-sans: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-sans: var(--font-mono);
 }
 
 html { background: var(--ink); }
