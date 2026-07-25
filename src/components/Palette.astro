@@ -99,6 +99,20 @@ const PINNED = PINNED_ARTICLE_TITLES
         throw err;
       });
 
+    // Static site routes, merged into matching client-side (feedback round 1:
+    // Foundation & friends weren't findable by typing). Constants only — the
+    // JSON article index is untouched. Scored by the same scorer via
+    // title/aliases; `url` (vs slug) routes the row and Enter straight there.
+    const ROUTES = [
+      { title: 'Foundation', url: `${BASE_URL}project-field/`, type: 'route', aliases: ['project field'] },
+      { title: 'Today', url: `${BASE_URL}today`, type: 'route', aliases: [] },
+      { title: 'Today Archive', url: `${BASE_URL}today/archive`, type: 'route', aliases: ['archive'] },
+      { title: 'Gaps', url: `${BASE_URL}gaps`, type: 'route', aliases: ['stubs', 'orphans'] },
+      { title: 'About', url: `${BASE_URL}about`, type: 'route', aliases: [] },
+      { title: 'Random', url: `${BASE_URL}random`, type: 'route', aliases: ['random article'] },
+    ];
+    const hrefFor = (m) => m.url || `${BASE_URL}wiki/${m.slug}`;
+
     const norm = (s) => (s || '').toLowerCase();
     function score(q, item) {
       const n = norm(item.title); const ali = (item.aliases || []).map(norm);
@@ -119,36 +133,44 @@ const PINNED = PINNED_ARTICLE_TITLES
       resultsEl.hidden = !has; emptyEl.hidden = has;
       if (!has) { resultsEl.innerHTML = ''; return; }
 
-      if (indexFailed) {
-        resultsEl.innerHTML = `<div class="palette-status">index unavailable — reload</div>`;
-        return;
-      }
-      if (!searchIndex) {
-        resultsEl.innerHTML = showLoadingHint ? `<div class="palette-status">loading index…</div>` : '';
-        return;
-      }
+      // Route matches render even while the article index is loading (or
+      // after it failed) — they're client-side constants.
       if (!matches.length) {
-        resultsEl.innerHTML = `<div class="palette-status">no matches</div>`;
+        if (indexFailed) {
+          resultsEl.innerHTML = `<div class="palette-status">index unavailable — reload</div>`;
+        } else if (!searchIndex) {
+          resultsEl.innerHTML = showLoadingHint ? `<div class="palette-status">loading index…</div>` : '';
+        } else {
+          resultsEl.innerHTML = `<div class="palette-status">no matches</div>`;
+        }
         return;
       }
       resultsEl.innerHTML = matches.map((m, i) => `
-        <a role="option" aria-selected="${i === activeIdx}" class="${i === activeIdx ? 'active' : ''}" href="${BASE_URL}wiki/${esc(m.slug)}">
+        <a role="option" aria-selected="${i === activeIdx}" class="${i === activeIdx ? 'active' : ''}" href="${esc(hrefFor(m))}">
           <span class="r-title">${esc(m.title)}</span>
           <span class="r-meta">${esc(m.type)}${m.excerpt ? ' · ' + esc(m.excerpt.slice(0, 60)) : ''}</span>
         </a>`).join('');
     }
     function update() {
       const q = norm(input.value.trim());
-      if (!q || !searchIndex) { matches = []; activeIdx = -1; render(); return; }
-      matches = searchIndex.map((it) => ({ it, s: score(q, it) }))
+      if (!q) { matches = []; activeIdx = -1; render(); return; }
+      const pool = searchIndex ? ROUTES.concat(searchIndex) : ROUTES;
+      matches = pool.map((it) => ({ it, s: score(q, it) }))
         .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 10).map((x) => x.it);
       activeIdx = matches.length ? 0 : -1; render();
     }
-    function open() {
+    // Optional `seed` (feedback round 1, "type to jump" should mean it):
+    // the homepage forwards the first typed character so the palette opens
+    // already containing it, with live results once the index is in.
+    function open(seed) {
       lastFocused = document.activeElement;
-      root.hidden = false; input.value = ''; matches = []; activeIdx = -1; showLoadingHint = false;
-      render();
-      requestAnimationFrame(() => input.focus());
+      root.hidden = false; input.value = seed || ''; matches = []; activeIdx = -1; showLoadingHint = false;
+      if (input.value.trim() !== '') update(); else render();
+      requestAnimationFrame(() => {
+        input.focus();
+        const n = input.value.length;
+        if (n) input.setSelectionRange(n, n); // caret after the seeded char
+      });
 
       if (!searchIndex && !indexFailed) {
         const timer = setTimeout(() => {
@@ -191,7 +213,7 @@ const PINNED = PINNED_ARTICLE_TITLES
       }
       if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, matches.length - 1); render(); }
       if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
-      if (e.key === 'Enter' && activeIdx >= 0 && matches[activeIdx]) { window.location.href = `${BASE_URL}wiki/${matches[activeIdx].slug}`; }
+      if (e.key === 'Enter' && activeIdx >= 0 && matches[activeIdx]) { window.location.href = hrefFor(matches[activeIdx]); }
     });
     input?.addEventListener('input', update);
     root.querySelectorAll('[data-palette-close]').forEach((el) => el.addEventListener('click', close));

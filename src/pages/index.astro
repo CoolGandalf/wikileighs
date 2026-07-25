@@ -116,5 +116,22 @@ const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minu
     motionQuery.addEventListener('change', () => { reduced = motionQuery.matches; start(); });
     size(); addEventListener('resize', () => { size(); if (reduced) draw(performance.now()); });
     start();
+
+    // "type to jump" means it (feedback round 1): on the homepage, any bare
+    // printable keypress opens the palette seeded with that character.
+    // '/' is excluded — it stays the palette's own open-empty shortcut
+    // (handled in Palette.astro); modifiers, IME composition, and typing
+    // into real inputs are left alone. This script registers before the
+    // palette's listener, which no-ops for printable keys once open.
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+      if (e.key.length !== 1 || e.key === ' ' || e.key === '/') return;
+      const t = e.target;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      const paletteRoot = document.getElementById('palette-root');
+      if (!paletteRoot || !paletteRoot.hidden || !window.__paletteOpen) return;
+      e.preventDefault();
+      window.__paletteOpen(e.key);
+    });
   </script>
 </Base>
