@@ -486,6 +486,27 @@ body {
   background: rgba(13, 16, 24, 0.78); border: 1px solid var(--gold-soft); border-radius: 9px;
   padding: 13px 16px; color: var(--t-muted); font-family: var(--font-mono); font-size: 13px;
   cursor: pointer; box-shadow: 0 10px 50px rgba(0, 0, 0, 0.55); }
+/* Explorable Sky (feedback round 2): while zoomed (scale > 1) the
+   %-positioned DOM stars and cluster labels can't track the canvas
+   transform, so they hide; the canvas re-renders the glow stars and a
+   single floating tooltip takes over. Both layers restore on reset. */
+.sky.zoomed .star-dom, .sky.zoomed .cluster-label { display: none; }
+/* Floating canvas tooltip — same visual language as .star-dom .tip. */
+.sky-tip { position: absolute; white-space: nowrap; pointer-events: none; z-index: 5;
+  font-family: var(--font-mono); font-size: 10px; color: var(--gold);
+  background: rgba(11, 14, 20, 0.85); border: 1px solid var(--gold-soft);
+  border-radius: 4px; padding: 2px 7px; }
+/* "reset view" chip — appears only while zoomed (hidden attr toggled in JS). */
+.sky-reset { position: absolute; top: 14px; right: 16px; z-index: 6;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em;
+  color: var(--t-muted); background: rgba(13, 16, 24, 0.78);
+  border: 1px solid var(--gold-hairline); border-radius: 999px;
+  padding: 5px 13px; cursor: pointer; }
+.sky-reset:hover, .sky-reset:focus-visible { color: var(--gold); border-color: var(--gold-soft); }
+/* Visually-hidden (screen-reader-only) utility — used for the sky's
+   keyboard-path note; canvas stars themselves are not tabbable. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .sky-status { position: absolute; left: 0; right: 0; bottom: 3%; display: flex; flex-wrap: wrap;
   justify-content: center; gap: 18px; font-family: var(--font-mono); font-size: 11px; color: var(--t-muted); }
 .sky-status a { color: var(--t-muted); text-decoration: none; }

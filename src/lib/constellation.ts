@@ -44,6 +44,34 @@ export function starPosition(slug: string, type: string): { x: number; y: number
   };
 }
 
+/**
+ * Undirected wikilink edges for the Explorable Sky, as a flat
+ * [i0,j0, i1,j1, …] array of index pairs into the caller's array (the same
+ * order the homepage uses for its fieldStars payload). A→B and B→A collapse
+ * to one pair (emitted with the smaller index first), self-links are dropped,
+ * and outbound targets that aren't in the array are ignored. Pure list logic —
+ * the link data itself comes from vault.ts's public Article.outbound.
+ */
+export function buildEdges(items: Array<{ slug: string; outbound: string[] }>): number[] {
+  const indexOf = new Map<string, number>();
+  items.forEach((it, i) => { if (!indexOf.has(it.slug)) indexOf.set(it.slug, i); });
+  const n = items.length;
+  const seen = new Set<number>();
+  const flat: number[] = [];
+  for (let i = 0; i < n; i++) {
+    for (const target of items[i].outbound) {
+      const j = indexOf.get(target);
+      if (j === undefined || j === i) continue;
+      const a = Math.min(i, j), b = Math.max(i, j);
+      const key = a * n + b;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      flat.push(a, b);
+    }
+  }
+  return flat;
+}
+
 const DAY_MS = 86_400_000;
 
 export function isRecent(updated: string | null | undefined, now: Date = new Date()): boolean {
