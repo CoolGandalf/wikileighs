@@ -43,7 +43,7 @@ function truncate(s: string, n: number): string {
       {matches.map(a => (
         <div class="idx-row">
           <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-          <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+          <span class="idx-date">{(a.updated || a.created || '').slice(5) || '—'}</span>
           <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
         </div>
       ))}

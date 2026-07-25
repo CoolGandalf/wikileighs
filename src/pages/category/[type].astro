@@ -122,7 +122,7 @@ function truncate(s: string, n: number): string {
           {group.entries.map(e => (
             <div class="idx-row">
               <a class="idx-title" href={`${BASE_URL}wiki/${e.slug}`}>{e.title}</a>
-              <span class="idx-date">{(e._date || '').slice(5)}</span>
+              <span class="idx-date">{(e._date || '').slice(5) || '—'}</span>
               <span class="idx-excerpt">{truncate(e.firstParagraph, 90) || humanizeType(e.type)}</span>
             </div>
           ))}
@@ -131,8 +131,8 @@ function truncate(s: string, n: number): string {
     ) : (
       <>
         <div class="idx-orders">
-          <button type="button" class="idx-order active" data-order="recent">recent</button>
-          <button type="button" class="idx-order" data-order="az">a–z</button>
+          <button type="button" class="idx-order active" data-order="recent" aria-pressed="true">recent</button>
+          <button type="button" class="idx-order" data-order="az" aria-pressed="false">a–z</button>
         </div>
         <div id="order-recent" class="idx-list">
           {isProjects ? statusOverview.map(bucket => (
@@ -141,7 +141,7 @@ function truncate(s: string, n: number): string {
               {bucket.items.map(a => (
                 <div class="idx-row">
                   <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-                  <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+                  <span class="idx-date">{(a.updated || a.created || '').slice(5) || '—'}</span>
                   <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
                 </div>
               ))}
@@ -149,7 +149,7 @@ function truncate(s: string, n: number): string {
           )) : recentSorted.map(a => (
             <div class="idx-row">
               <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-              <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+              <span class="idx-date">{(a.updated || a.created || '').slice(5) || '—'}</span>
               <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
             </div>
           ))}
@@ -158,14 +158,17 @@ function truncate(s: string, n: number): string {
           {articles.map(a => (
             <div class="idx-row">
               <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-              <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+              <span class="idx-date">{(a.updated || a.created || '').slice(5) || '—'}</span>
               <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
             </div>
           ))}
         </div>
         <script is:inline>
           document.querySelectorAll('.idx-order').forEach(b => b.addEventListener('click', () => {
-            document.querySelectorAll('.idx-order').forEach(x => x.classList.toggle('active', x === b));
+            document.querySelectorAll('.idx-order').forEach(x => {
+              x.classList.toggle('active', x === b);
+              x.setAttribute('aria-pressed', String(x === b));
+            });
             document.getElementById('order-recent').hidden = b.dataset.order !== 'recent';
             document.getElementById('order-az').hidden = b.dataset.order !== 'az';
           }));
