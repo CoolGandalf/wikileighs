@@ -28,7 +28,11 @@ const glowing = articles.filter(a => isRecent(a.updated))
 // - a label whose above-cluster spot lands in the palette's vertical band
 //   (28–42%) flips below its cluster instead of hiding under the button.
 // - types without their own cluster share the misc center; those labels
-//   render as fixed-pixel stacked rows (same band check on the stack base).
+//   render as fixed-pixel stacked rows OFFSET LEFT of the misc cluster
+//   (geometry lives in .cluster-label.stacked in global.css — measured
+//   feedback-round-1 fix: rows centered on the cluster overprinted its
+//   stars). Only --row + the lead-row class are emitted here; the row-0
+//   label carries a leader dash pointing at the cluster it names.
 const centerCounts = new Map<string, number>();
 const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
   const c = clusterCenter(tc.type);
@@ -42,28 +46,22 @@ const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
   const lx = Math.min(92, Math.max(8, l.c.x));
   let lt = Math.max(2, l.c.y - l.c.ry - 4);
   if (lt >= 28 && lt <= 42) lt = l.c.y + l.c.ry + 2; // palette band → below cluster
-  let stackBase = l.c.y + 2; // shared-center rows: base inside the ellipse's lower half
-  if (stackBase >= 28 && stackBase <= 42) stackBase = l.c.y + l.c.ry + 2;
   const shared = (centerCounts.get(l.key) ?? 1) > 1;
   return {
     ...l, text, shared,
-    leftStyle: `clamp(${halfW}px, ${lx}%, calc(100% - ${halfW}px))`,
-    // Shared-center rows stack UPWARD from the base into the gap under the
-    // palette (safe for sky heights ≳590px — the binding constraint is height, not width). Below the 640px breakpoint the
-    // .stacked mobile override in global.css moves the column to the empty
-    // band above the palette instead — labels' px widths don't scale with
-    // the viewport, so the two regimes need different homes.
-    topStyle: shared ? `calc(${stackBase}% - ${l.stack * 17}px)` : `${lt}%`,
+    styleAttr: shared
+      ? `--row:${l.stack}`
+      : `left:clamp(${halfW}px, ${lx}%, calc(100% - ${halfW}px));top:${lt}%`,
   };
 });
 const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' });
 ---
-<Base title="Home">
+<Base title="Home" bleed>
   <div class="sky" id="sky">
     <canvas id="sky-canvas" aria-hidden="true"></canvas>
     {clusterLabels.map(l => (
-      <a class={`cluster-label${l.shared ? ' stacked' : ''}`}
-         style={`left:${l.leftStyle};top:${l.topStyle};--row:${l.stack}`}
+      <a class={`cluster-label${l.shared ? ' stacked' : ''}${l.shared && l.stack === 0 ? ' stacked-lead' : ''}`}
+         style={l.styleAttr}
          href={`${BASE_URL}category/${l.type}`}>{l.text}</a>
     ))}
     {glowing.map(s => (

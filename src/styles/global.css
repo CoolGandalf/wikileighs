@@ -426,6 +426,9 @@ body {
   color: var(--t-muted); font-family: var(--font-mono); font-size: 11px; padding: 4px 12px; cursor: pointer; }
 .search-chip:hover { border-color: var(--gold-soft); color: var(--t-body); }
 .main-col { max-width: 1080px; margin: 0 auto; padding: 24px; }
+/* Full-bleed main (homepage sky): the sky IS the page, so no max-width box
+   around it — Base.astro swaps this in via the `bleed` prop. */
+.main-bleed { width: 100%; }
 .page-footer { max-width: 1080px; margin: 24px auto 32px; padding: 12px 24px;
   border-top: 1px solid var(--gold-hairline); color: var(--t-muted);
   font-family: var(--font-mono); font-size: 11px; }
@@ -433,8 +436,15 @@ body {
 .footer-pinned { margin-top: 4px; opacity: .8; }
 
 /* ---- Constellation homepage (spec §3) ---- */
-.sky { position: relative; height: calc(100vh - 140px); min-height: 480px; overflow: hidden;
-  border-radius: 12px; background:
+/* Full-bleed (feedback round 1): the sky spans the viewport edge-to-edge —
+   no rounded box inside a visibly different ink field. Height fills the
+   viewport below the topbar (53px measured); the footer sits under the fold.
+   The first background layer repeats the body .grain dots so the texture is
+   continuous across the topbar seam instead of "image vs rest". Nebula
+   ellipses are %-based, so they scale with the viewport on ultrawide. */
+.sky { position: relative; height: calc(100vh - 53px); min-height: 480px; overflow: hidden;
+  background:
+    radial-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px) 0 0 / 3px 3px,
     radial-gradient(ellipse 60% 40% at 75% 15%, rgba(88, 118, 200, 0.16), transparent 60%),
     radial-gradient(ellipse 50% 35% at 15% 80%, rgba(64, 160, 150, 0.10), transparent 60%),
     var(--ink); }
@@ -443,12 +453,25 @@ body {
   font-size: 10px; letter-spacing: 0.22em; color: var(--t-muted); text-decoration: none;
   white-space: nowrap; }
 .cluster-label:hover { color: var(--gold); }
-/* Shared-center (misc) label column: on narrow viewports the desktop slot
-   collides with neighboring labels (px-wide text vs %-scaled positions), so
-   the column moves to the empty band between the top labels and the palette.
-   !important intentionally beats the inline desktop top. */
+/* Shared-center (misc) rows: a right-aligned column in the open ink LEFT of
+   the misc cluster — rows centered on the cluster overprinted its stars
+   (feedback round 1, measured at 1280×800: rows y 309–359 sat inside the
+   star band x 464–671 / y 277–383). Right edge at 43% clears the cluster's
+   left rim (45%); top 46% clears the palette band (34% + button height, for
+   any sky ≥ 408px tall); bottom row ends ≈51%, above the JOURNAL label at
+   55%. Row 0 (.stacked-lead) carries a leader dash pointing at the cluster
+   it names. Geometry lives here — index.astro emits only --row. */
+.cluster-label.stacked { left: auto; right: 57%; transform: none;
+  top: calc(46% + var(--row) * 17px); }
+.cluster-label.stacked-lead::after { content: ''; display: inline-block; width: 14px;
+  height: 1px; background: currentColor; opacity: 0.5; margin-left: 8px; vertical-align: middle; }
+/* Narrow viewports: px-wide text vs %-scaled positions collides with the
+   voice-memo cluster, so the column moves to the empty band between the top
+   labels and the palette (centered — the leader dash would point at nothing). */
 @media (max-width: 640px) {
-  .cluster-label.stacked { top: calc(20% + var(--row) * 17px) !important; }
+  .cluster-label.stacked { left: 55%; right: auto; transform: translateX(-50%);
+    top: calc(20% + var(--row) * 17px); }
+  .cluster-label.stacked-lead::after { display: none; }
 }
 .star-dom { position: absolute; width: 24px; height: 24px; transform: translate(-50%, -50%); border-radius: 50%; }
 .star-dom::after { content: ''; position: absolute; inset: 9px; border-radius: 50%;
