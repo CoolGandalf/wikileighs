@@ -8,14 +8,6 @@ export async function getStaticPaths() {
 
 const { type } = Astro.params;
 const articles = getArticlesByType(type!);
-const groups = new Map<string, typeof articles>();
-for (const a of articles) {
-  const letter = (a.title[0] || '#').toUpperCase();
-  const key = /[A-Z]/.test(letter) ? letter : '#';
-  if (!groups.has(key)) groups.set(key, []);
-  groups.get(key)!.push(a);
-}
-const sortedGroups = Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
 const BASE_URL = import.meta.env.BASE_URL;
 
 // For type=project, build a status-grouped overview as the intro.
@@ -103,6 +95,16 @@ if (isProjects) {
   }
 }
 
+// Flat "recent" order for the Recent/A–Z toggle (non-project, non-chronological
+// types). A–Z order reuses `articles` directly — getArticlesByType() already
+// sorts non-chronological types by title.
+const recentSorted = [...articles].sort((a, b) => {
+  const au = a.updated || a.created || '';
+  const bu = b.updated || b.created || '';
+  if (au !== bu) return bu.localeCompare(au);
+  return a.title.localeCompare(b.title);
+});
+
 function truncate(s: string, n: number): string {
   if (!s) return '';
   const clean = s.replace(/\s+/g, ' ').trim();
@@ -110,95 +112,65 @@ function truncate(s: string, n: number): string {
 }
 ---
 <Base title={pluralizeType(type!)} activeType={type}>
-  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Category</div>
   <article class="article-body">
-    <h1>Category: {pluralizeType(type!)}</h1>
-    <p>
-      {articles.length} {articles.length === 1 ? 'article' : 'articles'} of type <strong>{humanizeType(type!)}</strong>.
-    </p>
+    <h1 class="cat-title">{pluralizeType(type!)} <span class="gold">{articles.length}</span></h1>
 
-    {isProjects && statusOverview.length > 0 && (
-      <section style="margin-top: 1.5rem;">
-        <h2 id="status-overview">Status overview</h2>
-        <p style="color: var(--color-muted); font-size: 0.9em; margin-top: 0.25rem;">
-          Auto-derived from each project page's <code>status:</code> frontmatter. Sorted within each bucket by most recently updated.
-        </p>
-
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.92em; margin-top: 0.75rem;">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--color-border, #ccc); text-align: left;">
-              <th style="padding: 0.35rem 0.5rem; width: 24%;">Project</th>
-              <th style="padding: 0.35rem 0.5rem; width: 11%;">Updated</th>
-              <th style="padding: 0.35rem 0.5rem;">Summary</th>
-            </tr>
-          </thead>
-          <tbody>
-            {statusOverview.map(bucket => (
-              <>
-                <tr>
-                  <td colspan="3" style="padding: 0.75rem 0.5rem 0.25rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; font-size: 0.8em; letter-spacing: 0.04em;">
-                    {bucket.label} <span style="font-weight: 400; opacity: 0.7;">· {bucket.items.length}</span>
-                  </td>
-                </tr>
-                {bucket.items.map(a => (
-                  <tr style="border-bottom: 1px solid var(--color-border, #eee);">
-                    <td style="padding: 0.35rem 0.5rem; vertical-align: top;">
-                      <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-                    </td>
-                    <td style="padding: 0.35rem 0.5rem; vertical-align: top; color: var(--color-muted); font-variant-numeric: tabular-nums; font-size: 0.88em;">
-                      {a.updated || '—'}
-                    </td>
-                    <td style="padding: 0.35rem 0.5rem; vertical-align: top; color: var(--color-muted); font-size: 0.92em;">
-                      {truncate(a.firstParagraph, 160)}
-                    </td>
-                  </tr>
-                ))}
-              </>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    )}
-
-    {isChronological && journalMonths.length > 0 && (
-      <section style="margin-top: 1.5rem;">
-        <p style="color: var(--color-muted); font-size: 0.9em;">
-          Sorted chronologically, newest first. Each entry links to its full wiki page.
-        </p>
-        {journalMonths.map(group => (
-          <section class="archive-month">
-            <h2 id={`month-${group.monthKey}`}>{group.monthLabel}</h2>
-            <ul class="archive-list">
-              {group.entries.map(e => (
-                <li>
-                  <a href={`${BASE_URL}wiki/${e.slug}`}>
-                    {e._date || e.title}{e._time ? ` · ${e._time}` : ''}
-                  </a>
-                  <span class="archive-stamp">{truncate(e.firstParagraph, 100) || humanizeType(e.type)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </section>
-    )}
-
-    {isProjects && statusOverview.length > 0 && (
-      <h2 style="margin-top: 2rem;" id="alphabetical">Alphabetical</h2>
-    )}
-
-    {!isChronological && sortedGroups.map(([letter, list]) => (
-      <section style="margin-top: 1rem;">
-        <h2 id={`group-${letter}`}>{letter}</h2>
-        <ul style="list-style: none; padding: 0; column-count: 2; column-gap: 2rem;">
-          {list.map(a => (
-            <li style="padding: 0.15rem 0; break-inside: avoid;">
-              <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-              <span style="color: var(--color-muted); font-style: italic; font-size: 0.85em;"> — {humanizeType(a.type)}</span>
-            </li>
+    {isChronological ? (
+      journalMonths.map(group => (
+        <>
+          <div class="bucket-title">{group.monthLabel}</div>
+          {group.entries.map(e => (
+            <div class="idx-row">
+              <a class="idx-title" href={`${BASE_URL}wiki/${e.slug}`}>{e.title}</a>
+              <span class="idx-date">{(e._date || '').slice(5)}</span>
+              <span class="idx-excerpt">{truncate(e.firstParagraph, 90) || humanizeType(e.type)}</span>
+            </div>
           ))}
-        </ul>
-      </section>
-    ))}
+        </>
+      ))
+    ) : (
+      <>
+        <div class="idx-orders">
+          <button type="button" class="idx-order active" data-order="recent">recent</button>
+          <button type="button" class="idx-order" data-order="az">a–z</button>
+        </div>
+        <div id="order-recent" class="idx-list">
+          {isProjects ? statusOverview.map(bucket => (
+            <>
+              <div class="bucket-title">{bucket.label} · {bucket.items.length}</div>
+              {bucket.items.map(a => (
+                <div class="idx-row">
+                  <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
+                  <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+                  <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
+                </div>
+              ))}
+            </>
+          )) : recentSorted.map(a => (
+            <div class="idx-row">
+              <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
+              <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+              <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
+            </div>
+          ))}
+        </div>
+        <div id="order-az" class="idx-list" hidden>
+          {articles.map(a => (
+            <div class="idx-row">
+              <a class="idx-title" href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
+              <span class="idx-date">{(a.updated || a.created || '').slice(5)}</span>
+              <span class="idx-excerpt">{truncate(a.firstParagraph || '', 90)}</span>
+            </div>
+          ))}
+        </div>
+        <script is:inline>
+          document.querySelectorAll('.idx-order').forEach(b => b.addEventListener('click', () => {
+            document.querySelectorAll('.idx-order').forEach(x => x.classList.toggle('active', x === b));
+            document.getElementById('order-recent').hidden = b.dataset.order !== 'recent';
+            document.getElementById('order-az').hidden = b.dataset.order !== 'az';
+          }));
+        </script>
+      </>
+    )}
   </article>
 </Base>
