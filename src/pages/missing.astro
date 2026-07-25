@@ -3,14 +3,49 @@ import Base from '../layouts/Base.astro';
 const url = new URL(Astro.request.url);
 const title = url.searchParams.get('title') || 'Unknown page';
 const BASE_URL = import.meta.env.BASE_URL;
+
+// Static, faint scatter for the empty patch of sky — a handful of dots, no canvas.
+const stars = [
+  { top: 10, left: 10 },
+  { top: 16, left: 84 },
+  { top: 28, left: 46, big: true },
+  { top: 34, left: 68 },
+  { top: 62, left: 14 },
+  { top: 70, left: 90 },
+  { top: 82, left: 34 },
+  { top: 46, left: 92 },
+  { top: 50, left: 6 },
+  { top: 20, left: 58 },
+  { top: 76, left: 58, big: true },
+  { top: 88, left: 78 },
+];
 ---
 <Base title={`${title} — missing`}>
-  <article class="article-body">
-    <h1>{title}</h1>
-    <p style="color: var(--color-muted);">
-      This page does not exist in the vault. Wikilinks pointing here will render in red until the
-      corresponding note is created in <code>notes/</code>.
-    </p>
-    <p><a href={BASE_URL}>← Back to main page</a></p>
-  </article>
+  <div class="missing-sky">
+    <div class="missing-stars" aria-hidden="true">
+      {stars.map(s => (
+        <div class={`missing-star${s.big ? ' big' : ''}`} style={`top:${s.top}%;left:${s.left}%`} />
+      ))}
+    </div>
+    <div class="missing-content">
+      <h1 class="missing-message">that star isn't charted yet</h1>
+      <p class="missing-star-title" id="missing-title">{title}</p>
+      <button type="button" class="sky-open-palette" onclick="window.__paletteOpen && window.__paletteOpen()">
+        <span class="palette-caret"></span> search the sky instead
+      </button>
+    </div>
+  </div>
+  <p class="missing-home"><a href={BASE_URL}>← home</a></p>
+
+  <script is:inline>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('title');
+      if (t) {
+        const el = document.getElementById('missing-title');
+        if (el) el.textContent = t;
+        document.title = t + ' — missing — WikiLeighs';
+      }
+    })();
+  </script>
 </Base>
