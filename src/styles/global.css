@@ -833,5 +833,7 @@ body {
 .gap-row { font-family: var(--font-mono); font-size: 12.5px; line-height: 2; color: var(--t-secondary); }
 .gap-row a { color: var(--gold); text-decoration: none; }
 .gap-row a:hover { text-decoration: underline; }
+.gap-row a.wikilink-broken { color: var(--t-muted); border-bottom: 1px dashed rgba(139, 147, 165, 0.4); }
+.gap-row a.wikilink-broken:hover { color: var(--t-muted); border-bottom-color: var(--t-muted); text-decoration: none; }
 .gap-meta { color: var(--t-muted); font-size: 11px; }
 .gap-note { font-family: var(--font-mono); font-size: 10.5px; color: var(--t-muted); margin-top: 6px; }
