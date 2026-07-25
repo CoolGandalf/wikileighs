@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import StubBanner from '../../components/StubBanner.astro';
+import LocalSky from '../../components/LocalSky.astro';
 import {
   loadAllArticles,
   getArticleBySlug,
@@ -9,7 +10,7 @@ import {
   resolveWikilink,
   slugify,
   humanizeType,
-  pluralizeType,
+  isStub,
 } from '../../lib/vault';
 
 export async function getStaticPaths() {
@@ -28,6 +29,10 @@ const isGreeneLesson = article.tags.includes('greene-semester') && article.tags.
 const infoboxPairs = getInfoboxAsPairs(article);
 const incoming = getIncomingLinks(article.slug).slice(0, 12);
 const hasPortraitInfobox = article.type === 'person' || article.type === 'figure';
+
+const skyNeighbors = incoming.map(a => ({ slug: a.slug, title: a.title, journal: a.type === 'journal' || a.type === 'voice-memo' }));
+const readMinutes = Math.max(1, Math.round(((article.html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length) / 220));
+const isStubArticle = isStub(article);
 
 const editSubject = encodeURIComponent(`[cc:Mac] WikiLeighs edit: ${article.title}`);
 const editBody = encodeURIComponent(
@@ -62,90 +67,90 @@ function renderInfoboxValue(key: string, raw: string): string {
 function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
-
-const breadcrumbBits: string[] = [];
-breadcrumbBits.push(`<a href="${BASE_URL}category/${article.type}">${humanizeType(article.type)}</a>`);
-if (article.created) breadcrumbBits.push(`created ${article.created}`);
-if (article.updated && article.updated !== article.created) breadcrumbBits.push(`updated ${article.updated}`);
 ---
 <Base title={article.title} description={article.firstParagraph || article.title} activeType={article.type}>
-  <div class="breadcrumb">
-    <Fragment set:html={breadcrumbBits.join(' · ')} />
-  </div>
-  <nav class="tabs">
-    <a class="active" href={`${BASE_URL}wiki/${article.slug}`}>Article</a>
-    <a href={`${BASE_URL}category/${article.type}`}>{humanizeType(article.type)}</a>
-    {article.tags.slice(0, 4).map(t => (
-      <a href={`${BASE_URL}tag/${slugify(t)}`}>#{t}</a>
-    ))}
-    <a class="suggest-edit" href={editMailto} title="Email Leigh a suggested change for this page">✎ Suggest edit</a>
-  </nav>
-
-  <article class={isGreeneLesson ? 'article-body greene-lesson' : 'article-body'}>
-    {!isGreeneLesson && <h1>{article.title}</h1>}
-
-    <StubBanner article={article} />
-
-    {article.photo && !hasPortraitInfobox && (
-      <figure class="today-hero">
-        <img src={article.photo} alt={article.title} loading="lazy" />
-      </figure>
-    )}
-
-    {!isGreeneLesson && (infoboxPairs.length > 0 || hasPortraitInfobox) && (
-      <aside class="infobox" aria-label="Infobox">
-        <div class="infobox-header">{article.title}</div>
-        {hasPortraitInfobox && (
-          <div class="infobox-image">
-            {article.photo ? (
-              <img
-                src={article.photo}
-                alt={article.title}
-                loading="lazy"
-                class="rounded-full object-cover aspect-square person-photo"
-                onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'silver-circle',textContent:this.dataset.initials}))"
-                data-initials={initialsFor(article.title)}
-              />
-            ) : (
-              <span class="silver-circle">{initialsFor(article.title)}</span>
+  {isGreeneLesson ? (
+    <Fragment>
+      {/* Greene Semester lessons keep their dedicated print layout untouched. */}
+      <article class="article-body greene-lesson">
+        <StubBanner article={article} />
+        {article.photo && !hasPortraitInfobox && (
+          <figure class="today-hero">
+            <img src={article.photo} alt={article.title} loading="lazy" />
+          </figure>
+        )}
+        <Fragment set:html={article.html} />
+      </article>
+      {incoming.length > 0 && (
+        <section style="margin-top: 1.5rem; border-top: 1px solid var(--color-border-light); padding-top: 0.7rem;">
+          <h2 style="font-family: var(--font-serif); font-weight: 400; font-size: 1.15rem; margin-bottom: 0.4rem;">What links here</h2>
+          <ul style="list-style: disc; margin-left: 1.35rem; font-size: 0.9rem; columns: 2; column-gap: 1.5rem;">
+            {incoming.map(i => <li style="break-inside: avoid;"><a href={`${BASE_URL}wiki/${i.slug}`} style="color: var(--color-link); text-decoration: none;">{i.title}</a> <span style="color: var(--color-muted); font-style: italic;">— {humanizeType(i.type)}</span></li>)}
+          </ul>
+        </section>
+      )}
+    </Fragment>
+  ) : (
+    <article class="room">
+      <div class="room-main">
+        <div class="pills">
+          <a class="pill gold" href={`${BASE_URL}category/${article.type}`}>{article.type}</a>
+          {article.tags.slice(0, 4).map(t => <a class="pill" href={`${BASE_URL}tag/${slugify(t)}`}>{t}</a>)}
+        </div>
+        <h1 class="room-title">{article.title}</h1>
+        <div class="room-meta">
+          updated <span class="verd">{article.updated || article.created || '—'}</span>
+          · {incoming.length} backlinks · {readMinutes} min ·
+          <a class="suggest" href={editMailto}>✎ suggest edit</a>
+        </div>
+        {isStubArticle && <StubBanner article={article} />}
+        {article.photo && !hasPortraitInfobox && (
+          <figure class="today-hero">
+            <img src={article.photo} alt={article.title} loading="lazy" />
+          </figure>
+        )}
+        <div class="article-body" set:html={article.html} />
+        <LocalSky neighbors={skyNeighbors} />
+      </div>
+      <aside class="room-side">
+        {(infoboxPairs.length > 0 || hasPortraitInfobox) && (
+          <div class="dossier">
+            <div class="dossier-title">Dossier</div>
+            {hasPortraitInfobox && (
+              <div class="dossier-portrait">
+                {article.photo ? (
+                  <img
+                    src={article.photo}
+                    alt={article.title}
+                    loading="lazy"
+                    class="rounded-full object-cover aspect-square person-photo"
+                    onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'silver-circle',textContent:this.dataset.initials}))"
+                    data-initials={initialsFor(article.title)}
+                  />
+                ) : (
+                  <span class="silver-circle">{initialsFor(article.title)}</span>
+                )}
+              </div>
+            )}
+            {infoboxPairs.length > 0 && (
+              <dl>
+                {infoboxPairs.map(p => (
+                  <Fragment>
+                    <dt>{p.key}</dt>
+                    <dd set:html={renderInfoboxValue(p.key, p.value)} />
+                  </Fragment>
+                ))}
+              </dl>
             )}
           </div>
         )}
-        {infoboxPairs.length > 0 && (
-          <table class="infobox-table">
-            <tbody>
-              {infoboxPairs.map(p => (
-                <tr>
-                  <th>{humanizeType(p.key)}</th>
-                  <td><Fragment set:html={renderInfoboxValue(p.key, p.value)} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {article.toc.length > 1 && (
+          <nav class="otp" aria-label="On this page">
+            <div class="otp-title">On this page</div>
+            {article.toc.map(h => <a href={`#${h.id}`} class={`d${h.level}`}>{h.text}</a>)}
+          </nav>
         )}
       </aside>
-    )}
-
-    {!isGreeneLesson && article.toc.length >= 2 && (
-      <div class="toc-box" style="float: none; clear: none; margin-bottom: 1rem;">
-        <div class="toc-box-title">Contents</div>
-        <ol>
-          {article.toc.filter(t => t.level === 2).map(t => (
-            <li><a href={`#${t.id}`}>{t.text}</a></li>
-          ))}
-        </ol>
-      </div>
-    )}
-
-    <Fragment set:html={article.html} />
-  </article>
-
-  {incoming.length > 0 && (
-    <section style="margin-top: 1.5rem; border-top: 1px solid var(--color-border-light); padding-top: 0.7rem;">
-      <h2 style="font-family: var(--font-serif); font-weight: 400; font-size: 1.15rem; margin-bottom: 0.4rem;">What links here</h2>
-      <ul style="list-style: disc; margin-left: 1.35rem; font-size: 0.9rem; columns: 2; column-gap: 1.5rem;">
-        {incoming.map(i => <li style="break-inside: avoid;"><a href={`${BASE_URL}wiki/${i.slug}`} style="color: var(--color-link); text-decoration: none;">{i.title}</a> <span style="color: var(--color-muted); font-style: italic;">— {humanizeType(i.type)}</span></li>)}
-      </ul>
-    </section>
+    </article>
   )}
 </Base>

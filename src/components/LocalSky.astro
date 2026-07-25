@@ -23,7 +23,12 @@ const sky = layoutLocalSky(neighbors, W, H);
           <a href={`${BASE_URL}wiki/${n.slug}`}>
             <title>{n.title}</title>
             <circle cx={n.x} cy={n.y} r="2.5" fill={n.journal ? 'var(--verdigris)' : 'var(--t-secondary)'} />
-            <circle cx={n.x} cy={n.y} r="10" fill="transparent" />
+            {/* Invisible hit target. r=14 (not 10): at mobile scale (~0.47x at
+                375px viewport) the rendered tap circle was ~9px in diameter;
+                14 brings it to ~13px and, with the label in the same <a>,
+                keeps neighbors tappable. Band spacing (>=50px between nodes)
+                means r=14 circles cannot overlap an adjacent node's target. */}
+            <circle cx={n.x} cy={n.y} r="14" fill="transparent" />
             <text x={n.x + dx} y={n.y + 3} text-anchor={anchor}
               fill={n.journal ? 'var(--verdigris)' : 'var(--t-secondary)'}
               font-size="10" font-family="IBM Plex Mono, monospace">{label}</text>
