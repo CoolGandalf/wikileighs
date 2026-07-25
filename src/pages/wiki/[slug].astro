@@ -6,6 +6,7 @@ import {
   loadAllArticles,
   getArticleBySlug,
   getIncomingLinks,
+  getInboundLinkCount,
   getInfoboxAsPairs,
   resolveWikilink,
   slugify,
@@ -27,7 +28,8 @@ if (!article) {
 
 const isGreeneLesson = article.tags.includes('greene-semester') && article.tags.includes('lesson');
 const infoboxPairs = getInfoboxAsPairs(article);
-const incoming = getIncomingLinks(article.slug).slice(0, 12);
+const incoming = getIncomingLinks(article.slug).slice(0, 12); // capped: feeds LocalSky + lesson what-links-here
+const backlinkCount = getInboundLinkCount(article.slug); // true count for the meta line
 const hasPortraitInfobox = article.type === 'person' || article.type === 'figure';
 
 const skyNeighbors = incoming.map(a => ({ slug: a.slug, title: a.title, journal: a.type === 'journal' || a.type === 'voice-memo' }));
@@ -71,7 +73,10 @@ function escapeHtml(s: string): string {
 <Base title={article.title} description={article.firstParagraph || article.title} activeType={article.type}>
   {isGreeneLesson ? (
     <Fragment>
-      {/* Greene Semester lessons keep their dedicated print layout untouched. */}
+      {/* Greene Semester lessons keep their dedicated print layout untouched.
+          The suggest-edit line lives OUTSIDE the lesson subtree (the old
+          shared tabs bar carried this affordance before the redesign). */}
+      <div class="room-meta"><a class="suggest" href={editMailto}>✎ suggest edit</a></div>
       <article class="article-body greene-lesson">
         <StubBanner article={article} />
         {article.photo && !hasPortraitInfobox && (
@@ -100,7 +105,7 @@ function escapeHtml(s: string): string {
         <h1 class="room-title">{article.title}</h1>
         <div class="room-meta">
           updated <span class="verd">{article.updated || article.created || '—'}</span>
-          · {incoming.length} backlinks · {readMinutes} min ·
+          · {backlinkCount} backlinks · {readMinutes} min ·
           <a class="suggest" href={editMailto}>✎ suggest edit</a>
         </div>
         {isStubArticle && <StubBanner article={article} />}

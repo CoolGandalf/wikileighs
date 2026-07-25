@@ -85,23 +85,23 @@ body {
   font-family: var(--font-serif);
   font-weight: 600;
   font-size: 1rem;
-  color: var(--t-heading);
   margin-top: 0.9rem;
   margin-bottom: 0.3rem;
 }
+.article-body:not(.greene-lesson) h4 { color: var(--t-heading); }
 
 .article-body p { margin: 0.55rem 0; }
 .article-body ul, .article-body ol { margin: 0.55rem 0 0.55rem 1.35rem; }
 .article-body ul li { list-style: disc; margin-bottom: 0.15rem; }
 .article-body ol li { list-style: decimal; margin-bottom: 0.15rem; }
 
-.article-body a {
+.article-body:not(.greene-lesson) a {
   color: var(--gold);
   text-decoration: none;
 }
 
 .article-body a:hover { text-decoration: underline; }
-.article-body a:visited { color: var(--gold); }
+.article-body:not(.greene-lesson) a:visited { color: var(--gold); }
 
 .article-body a.wikilink-broken {
   color: var(--t-muted);
@@ -178,9 +178,9 @@ body {
   vertical-align: top;
 }
 .article-body th {
-  background: var(--raised);
   font-weight: 600;
 }
+.article-body:not(.greene-lesson) th { background: var(--raised); }
 
 .article-body hr {
   border: 0;
