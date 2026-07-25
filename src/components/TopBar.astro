@@ -1,108 +1,19 @@
 ---
-import { getSearchIndex } from '../lib/vault';
-const searchIndex = getSearchIndex();
 const BASE_URL = import.meta.env.BASE_URL;
+interface Props { crumb?: string }
+const { crumb } = Astro.props;
 ---
 <header class="topbar">
-  <a href={BASE_URL} class="topbar-brand" style="color: inherit; text-decoration: none;">
-    <span class="logo">L</span>
-    <span class="topbar-wordmark">
-      <span class="title">WIKILEIGHS</span>
-      <span class="subtitle">The Personal Encyclopedia</span>
-    </span>
-  </a>
-  <form class="search-form" id="search-form" role="search" autocomplete="off" onsubmit="return window.__wikileighsSearchSubmit(event)">
-    <input
-      class="search-input"
-      id="search-input"
-      type="search"
-      placeholder="Search WikiLeighs"
-      aria-label="Search WikiLeighs"
-    />
-    <div class="search-results" id="search-results" role="listbox"></div>
-  </form>
-  <nav class="topbar-actions">
-    <a class="btn" href={`${BASE_URL}project-field/`}>Foundation</a>
-    <a class="btn" href={`${BASE_URL}random`}>Random</a>
-    <a class="btn" href={`${BASE_URL}about`}>About</a>
-  </nav>
+  <a href={BASE_URL} class="topbar-brand">wikileighs{crumb && <span class="crumb">/<span>{crumb}</span></span>}</a>
+  <div class="topbar-actions">
+    <button class="search-chip" onclick="window.__paletteOpen && window.__paletteOpen()">
+      <span data-key-hint>⌘K</span> search
+    </button>
+    <a class="verdigris" href={`${BASE_URL}today`}>today</a>
+    <a href={`${BASE_URL}random`}>random</a>
+  </div>
 </header>
-
-<script is:inline define:vars={{ searchIndex, BASE_URL }}>
-  window.__wikileighsIndex = searchIndex;
-
-  const input = document.getElementById('search-input');
-  const box = document.getElementById('search-results');
-  let activeIdx = -1;
-  let matches = [];
-
-  function normalize(s) { return (s || '').toLowerCase(); }
-
-  function score(q, item) {
-    const n = normalize(item.title);
-    const ali = item.aliases.map(normalize);
-    if (n === q) return 1000;
-    if (ali.includes(q)) return 900;
-    if (n.startsWith(q)) return 500 - n.length;
-    if (ali.some(a => a.startsWith(q))) return 450 - item.title.length;
-    if (n.includes(q)) return 200 - n.length;
-    const tagHit = item.tags.some(t => normalize(t).includes(q));
-    if (tagHit) return 120;
-    const exHit = normalize(item.excerpt).includes(q);
-    if (exHit) return 80;
-    return 0;
-  }
-
-  function render() {
-    if (!matches.length) { box.classList.remove('open'); box.innerHTML = ''; return; }
-    box.innerHTML = matches.map((m, i) => `
-      <a data-idx="${i}" class="${i === activeIdx ? 'active' : ''}" href="${BASE_URL}wiki/${m.slug}">
-        <div class="title">${escape(m.title)}</div>
-        <div class="meta">${escape(m.type)}${m.excerpt ? ' · ' + escape(m.excerpt.slice(0, 70)) : ''}</div>
-      </a>
-    `).join('');
-    box.classList.add('open');
-  }
-
-  function escape(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  }
-
-  function update() {
-    const q = normalize(input.value.trim());
-    if (!q) { matches = []; activeIdx = -1; render(); return; }
-    matches = window.__wikileighsIndex
-      .map(it => ({ item: it, s: score(q, it) }))
-      .filter(x => x.s > 0)
-      .sort((a, b) => b.s - a.s)
-      .slice(0, 12)
-      .map(x => x.item);
-    activeIdx = matches.length ? 0 : -1;
-    render();
-  }
-
-  input?.addEventListener('input', update);
-
-  input?.addEventListener('keydown', e => {
-    if (e.key === 'ArrowDown') { if (!matches.length) return; activeIdx = (activeIdx + 1) % matches.length; render(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { if (!matches.length) return; activeIdx = (activeIdx - 1 + matches.length) % matches.length; render(); e.preventDefault(); }
-    else if (e.key === 'Enter') {
-      if (matches[activeIdx]) {
-        e.preventDefault();
-        window.location.href = BASE_URL + 'wiki/' + matches[activeIdx].slug;
-      }
-    }
-    else if (e.key === 'Escape') { input.value = ''; matches = []; activeIdx = -1; render(); }
-  });
-
-  document.addEventListener('click', e => {
-    if (!box.contains(e.target) && e.target !== input) box.classList.remove('open');
-  });
-
-  window.__wikileighsSearchSubmit = function(ev) {
-    ev.preventDefault();
-    if (matches[activeIdx]) window.location.href = BASE_URL + 'wiki/' + matches[activeIdx].slug;
-    else if (matches[0]) window.location.href = BASE_URL + 'wiki/' + matches[0].slug;
-    return false;
-  };
+<script is:inline>
+  if (!navigator.platform.startsWith('Mac'))
+    document.querySelectorAll('[data-key-hint]').forEach(el => (el.textContent = 'Ctrl K'));
 </script>
