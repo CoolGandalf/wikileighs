@@ -834,3 +834,32 @@ body {
   font-family: var(--font-mono); font-size: 11px; }
 .page-footer a { color: var(--t-muted); }
 .footer-pinned { margin-top: 4px; opacity: .8; }
+
+/* ---- Constellation homepage (spec §3) ---- */
+.sky { position: relative; height: calc(100vh - 140px); min-height: 480px; overflow: hidden;
+  border-radius: 12px; background:
+    radial-gradient(ellipse 60% 40% at 75% 15%, rgba(88, 118, 200, 0.16), transparent 60%),
+    radial-gradient(ellipse 50% 35% at 15% 80%, rgba(64, 160, 150, 0.10), transparent 60%),
+    var(--ink); }
+#sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cluster-label { position: absolute; transform: translateX(-50%); font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.22em; color: rgba(255, 255, 255, 0.4); text-decoration: none; }
+.cluster-label:hover { color: var(--gold); }
+.star-dom { position: absolute; width: 14px; height: 14px; transform: translate(-50%, -50%); border-radius: 50%; }
+.star-dom::after { content: ''; position: absolute; inset: 4px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 10px 2px var(--gold-soft); }
+.star-dom.verd::after { background: var(--verdigris); box-shadow: 0 0 10px 2px var(--verdigris-soft); }
+.star-dom .tip { display: none; position: absolute; left: 12px; top: -6px; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 10px; color: var(--gold); background: rgba(11, 14, 20, 0.85);
+  border: 1px solid var(--gold-soft); border-radius: 4px; padding: 2px 7px; z-index: 5; }
+.star-dom:hover .tip, .star-dom:focus .tip { display: block; }
+.sky-palette-slot { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); width: min(560px, 86%); }
+.sky-open-palette { width: 100%; display: flex; align-items: center; gap: 10px;
+  background: rgba(13, 16, 24, 0.78); border: 1px solid var(--gold-soft); border-radius: 9px;
+  padding: 13px 16px; color: var(--t-muted); font-family: var(--font-mono); font-size: 13px;
+  cursor: pointer; box-shadow: 0 10px 50px rgba(0, 0, 0, 0.55); }
+.sky-status { position: absolute; left: 0; right: 0; bottom: 3%; display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 18px; font-family: var(--font-mono); font-size: 11px; color: var(--t-muted); }
+.sky-status a { color: var(--t-muted); text-decoration: none; }
+.sky-status a.gold { color: var(--gold); }
+.sky-status a.verd, .sky-status .verd { color: var(--verdigris); }

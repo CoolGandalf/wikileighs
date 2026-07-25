@@ -1,27 +1,36 @@
+// Guard against UTC-runner date drift on the constellation homepage.
+// The old homepage rendered "Today, {label}"; the redesign renders a
+// status-line flag ("today ✓" when journal/today/<NY stamp>.md exists,
+// "today —" otherwise) computed via getTodayPage(new Date()), which is
+// New-York-anchored. Assert the flag matches the vault's actual state for
+// the current NY day — a UTC-shifted build would look up the wrong day's
+// file and flip the flag.
 import fs from 'node:fs';
 import path from 'node:path';
 
 const zone = 'America/New_York';
-const now = new Date();
-const stamp = now.toLocaleDateString('en-CA', { timeZone: zone });
-const parts = new Intl.DateTimeFormat('en-US', {
-  timeZone: zone,
-  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-}).formatToParts(now);
-const value = (type) => parts.find((part) => part.type === type)?.value ?? '';
-const label = `${value('weekday')} ${value('month')} ${value('day')} ${value('year')}`;
+const stamp = new Date().toLocaleDateString('en-CA', { timeZone: zone });
 
 const html = fs.readFileSync(path.resolve('dist/index.html'), 'utf8');
-if (!html.includes(`Today, ${label}`)) {
-  throw new Error(`Homepage date mismatch: expected "Today, ${label}" for ${stamp}`);
+const hasCheck = html.includes('today ✓');
+const hasDash = html.includes('today —');
+if (!hasCheck && !hasDash) {
+  throw new Error('Homepage is missing the "today ✓/—" status flag');
 }
 
 const vaultRoot = process.env.VAULT_ROOT;
-if (vaultRoot && fs.existsSync(path.join(vaultRoot, 'journal', 'today', `${stamp}.md`))) {
-  const href = `/wikileighs/today/${stamp}`;
-  if (!html.includes(href)) throw new Error(`Homepage is missing current-day link ${href}`);
-  const archive = path.resolve('dist', 'today', stamp, 'index.html');
-  if (!fs.existsSync(archive)) throw new Error(`Current-day archive was not built: ${archive}`);
+if (vaultRoot) {
+  const todayFileExists = fs.existsSync(path.join(vaultRoot, 'journal', 'today', `${stamp}.md`));
+  if (todayFileExists && !hasCheck) {
+    throw new Error(`Homepage shows "today —" but journal/today/${stamp}.md exists — NY date drift?`);
+  }
+  if (!todayFileExists && !hasDash) {
+    throw new Error(`Homepage shows "today ✓" but journal/today/${stamp}.md does not exist — NY date drift?`);
+  }
+  if (todayFileExists) {
+    const archive = path.resolve('dist', 'today', stamp, 'index.html');
+    if (!fs.existsSync(archive)) throw new Error(`Current-day archive was not built: ${archive}`);
+  }
 }
 
-console.log(`Today date check passed: ${label} → ${stamp}`);
+console.log(`Today flag check passed: ${hasCheck ? '✓' : '—'} for ${stamp}`);

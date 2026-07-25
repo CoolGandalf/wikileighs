@@ -1,225 +1,96 @@
 ---
 import Base from '../layouts/Base.astro';
-import { newYorkDateLabel, newYorkDateStamp } from '../lib/date';
-import {
-  loadAllArticles,
-  getTypeCounts,
-  getRecentlyUpdated,
-  getFeaturedArticle,
-  getArticlesByType,
-  getTodayPage,
-  getLatestUploadHero,
-  humanizeType,
-  pluralizeType,
-} from '../lib/vault';
+import { loadAllArticles, getTypeCounts, getStubs, getOrphans, getBrokenWikilinks, getTodayPage } from '../lib/vault';
+import { starPosition, clusterCenter, isRecent } from '../lib/constellation';
 
-const all = loadAllArticles();
-const typeCounts = getTypeCounts();
-const recentlyUpdated = getRecentlyUpdated(8);
-const featured = getFeaturedArticle();
-const heroPhoto = getLatestUploadHero();
-
-// Today block — always anchored to Leigh's local day, including UTC CI runners.
-const todayDate = new Date();
-const todayPage = getTodayPage(todayDate);
-const todayStamp = newYorkDateStamp(todayDate);
-const todayLabel = newYorkDateLabel(todayDate);
-
-// Extract briefing first paragraph from today's bodyMd
-function extractBriefingParagraph(bodyMd: string): string {
-  const lines = bodyMd.split('\n');
-  const idx = lines.findIndex((l) => /^##\s+Briefing/i.test(l.trim()));
-  if (idx < 0) return '';
-  const buf: string[] = [];
-  let started = false;
-  for (let i = idx + 1; i < lines.length; i++) {
-    const t = lines[i].trim();
-    if (!t) {
-      if (started) break;
-      continue;
-    }
-    if (t.startsWith('#')) { if (started) break; continue; }
-    started = true;
-    buf.push(t);
-  }
-  return buf
-    .join(' ')
-    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_: string, tgt: string, alias: string) => alias || tgt)
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[*_`]/g, '')
-    .slice(0, 420);
-}
-
-function extractTodayStats(bodyMd: string): { voiceMemos: number; photos: number; agentRuns: number | null } {
-  const vmMatch = bodyMd.match(/###\s+Voice memos\s+\((\d+)\)/i);
-  const voiceMemos = vmMatch ? parseInt(vmMatch[1], 10) : 0;
-
-  const photoCapturesMatch = bodyMd.match(/(\d+)\s+captures?/i);
-  const photos = photoCapturesMatch ? parseInt(photoCapturesMatch[1], 10) : 0;
-
-  const agentTotalMatch = bodyMd.match(/(\d+)\s+total\s+runs?/i);
-  let agentRuns: number | null = null;
-  if (agentTotalMatch) {
-    agentRuns = parseInt(agentTotalMatch[1], 10);
-  } else {
-    // Fallback: count lines like **AgentName** — N runs
-    const runLines = bodyMd.match(/\*\*[^*]+\*\*\s*—\s*\d+\s+runs?/g);
-    if (runLines && runLines.length > 0) {
-      let total = 0;
-      for (const l of runLines) {
-        const m = l.match(/(\d+)\s+runs?/);
-        if (m) total += parseInt(m[1], 10);
-      }
-      agentRuns = total > 0 ? total : null;
-    }
-  }
-
-  return { voiceMemos, photos, agentRuns };
-}
-
-const todayBriefing = todayPage
-  ? (extractBriefingParagraph(todayPage.bodyMd) || todayPage.firstParagraph)
-  : '';
-const todayStats = todayPage ? extractTodayStats(todayPage.bodyMd) : null;
-
-const categoriesForBrowse = typeCounts
-  .map(tc => ({
-    ...tc,
-    articles: getArticlesByType(tc.type).slice(0, 12),
-    total: tc.count,
-  }))
-  .filter(c => c.articles.length);
 const BASE_URL = import.meta.env.BASE_URL;
+const articles = loadAllArticles();
+const typeCounts = getTypeCounts();
+const stubCount = getStubs(10_000).length;
+const orphanCount = getOrphans(10_000).length;
+const brokenCount = getBrokenWikilinks(10_000).length;
+const hasToday = getTodayPage(new Date()) != null;
+
+// Client payload deliberately trimmed: the canvas needs geometry + color class only.
+// (slug/title/type stay server-side; interactive stars below are server-rendered.)
+const fieldStars = articles.map(a => {
+  const p = starPosition(a.slug, a.type);
+  return { x: +p.x.toFixed(2), y: +p.y.toFixed(2),
+    r: isRecent(a.updated), j: a.type === 'journal' || a.type === 'voice-memo' };
+});
+// Interactive DOM stars: the 40 most recently updated of the glow set (spec §3 cap).
+const glowing = articles.filter(a => isRecent(a.updated))
+  .sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 40)
+  .map(a => { const p = starPosition(a.slug, a.type); return { slug: a.slug, title: a.title, x: p.x, y: p.y, journal: a.type === 'journal' || a.type === 'voice-memo' }; });
+// Types without their own cluster all map to the misc center; stacked labels
+// there would overprint each other (and the palette slot, which sits over the
+// misc above-spot). Shared-center labels render as fixed-pixel rows inside the
+// lower half of their ellipse — px pitch so rows never collide at any height.
+const centerCounts = new Map<string, number>();
+const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
+  const c = clusterCenter(tc.type);
+  const key = `${c.x},${c.y}`;
+  const stack = centerCounts.get(key) ?? 0;
+  centerCounts.set(key, stack + 1);
+  return { ...tc, c, key, stack };
+}).map(l => ({
+  ...l,
+  topStyle: (centerCounts.get(l.key) ?? 1) > 1
+    ? `calc(${l.c.y + 2}% + ${l.stack * 17}px)`
+    : `${Math.max(2, l.c.y - l.c.ry - 4)}%`,
+}));
+const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' });
 ---
-<Base title="Main page">
-  <section class="welcome-block">
-    <h1 class="welcome-title">Welcome to WikiLeighs,</h1>
-    <p style="font-size: 15px; line-height: 1.6;">
-      the free encyclopedia that Leigh is writing. {all.length} articles across {typeCounts.length} categories,
-      rendered from the <code>notes/</code> subtree of his Obsidian vault.
-    </p>
-  </section>
-
-  <section class="today-block">
-    <h2 class="today-block-heading">Today, {todayLabel}</h2>
-    {todayPage ? (
-      <div>
-        {todayBriefing && <p class="today-briefing">{todayBriefing}</p>}
-        {todayStats && (
-          <p class="today-stats">
-            {todayStats.voiceMemos > 0 && <span>{todayStats.voiceMemos} voice memo{todayStats.voiceMemos !== 1 ? 's' : ''}</span>}
-            {todayStats.voiceMemos > 0 && todayStats.photos > 0 && <span class="today-stats-sep"> · </span>}
-            {todayStats.photos > 0 && <span>{todayStats.photos} photo{todayStats.photos !== 1 ? 's' : ''}</span>}
-            {(todayStats.voiceMemos > 0 || todayStats.photos > 0) && todayStats.agentRuns !== null && <span class="today-stats-sep"> · </span>}
-            {todayStats.agentRuns !== null && <span>{todayStats.agentRuns} agent run{todayStats.agentRuns !== 1 ? 's' : ''}</span>}
-          </p>
-        )}
-        <p class="today-read-more">
-          <a href={`${BASE_URL}today/${todayStamp}`}>Read full snapshot →</a>
-        </p>
-      </div>
-    ) : (
-      <div>
-        <p class="today-briefing" style="color: var(--color-muted); font-style: italic;">
-          Today's snapshot hasn't generated yet. Next refresh top of the hour.
-        </p>
-        <p class="today-read-more">
-          <a href={`${BASE_URL}today`}>View recent snapshots →</a>
-        </p>
-      </div>
-    )}
-  </section>
-
-  <div class="contents-row">
-    <div>
-      {featured && (
-        <section class="featured-block">
-          <div class="featured-header">Featured article</div>
-          <div class="featured-body">
-            {heroPhoto ? (
-              <figure class="featured-hero">
-                <img src={heroPhoto.src} alt={`Latest upload — ${heroPhoto.date}`} loading="lazy" />
-                <figcaption>{heroPhoto.date}</figcaption>
-              </figure>
-            ) : (
-              <div class="featured-image-placeholder" aria-hidden="true"></div>
-            )}
-            <span class="featured-title"><a href={`${BASE_URL}wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">{featured.title}</a></span>
-            {' '}— {featured.firstParagraph}
-            {' '}
-            <a href={`${BASE_URL}wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">(continue reading...)</a>
-            <div style="clear: both;"></div>
-          </div>
-        </section>
-      )}
-
-      {recentlyUpdated.length > 0 && (
-        <section class="browse-block recently-updated-block">
-          <h2 class="browse-title">Recently updated</h2>
-          <ul class="recently-updated-list">
-            {recentlyUpdated.map(a => (
-              <li>
-                <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-                <span class="tag-chip">{humanizeType(a.type)}</span>
-                <span class="date">{a.updated}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section class="browse-block">
-        <h2 class="browse-title">Browse by category</h2>
-        <div class="browse-grid">
-          {categoriesForBrowse.map(cat => (
-            <div class="browse-category">
-              <h3><a href={`${BASE_URL}category/${cat.type}`} style="color: inherit; text-decoration: none;">{pluralizeType(cat.type)}</a></h3>
-              <ul>
-                {cat.articles.map(a => (
-                  <li>
-                    <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-                    <span class="type"> — {humanizeType(a.type)}</span>
-                  </li>
-                ))}
-                {cat.total > cat.articles.length && (
-                  <li><a href={`${BASE_URL}category/${cat.type}`} style="color: var(--color-muted);">...and {cat.total - cat.articles.length} more</a></li>
-                )}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+<Base title="Home">
+  <div class="sky" id="sky">
+    <canvas id="sky-canvas" aria-hidden="true"></canvas>
+    {clusterLabels.map(l => (
+      <a class="cluster-label" style={`left:${l.c.x}%;top:${l.topStyle}`}
+         href={`${BASE_URL}category/${l.type}`}>{l.type.toUpperCase()} · {l.count}</a>
+    ))}
+    {glowing.map(s => (
+      <a class={`star-dom ${s.journal ? 'verd' : ''}`} style={`left:${s.x}%;top:${s.y}%`}
+         href={`${BASE_URL}wiki/${s.slug}`} aria-label={s.title}><span class="tip">{s.title}</span></a>
+    ))}
+    <div class="sky-palette-slot">
+      <button type="button" class="sky-open-palette" onclick="window.__paletteOpen && window.__paletteOpen()">
+        <span class="palette-caret"></span> type to jump — <span data-key-hint>⌘K</span> anywhere
+      </button>
     </div>
-
-    <div>
-      <section class="card">
-        <div class="card-header">About WikiLeighs</div>
-        <div class="card-body">
-          <p>
-            WikiLeighs is a personal encyclopedia — everything I'm consuming, doing, and thinking about.
-            It's Leigh's Obsidian vault, rendered as a browsable web reader inspired by Wikipedia and Farzapedia.
-          </p>
-          <p style="margin-top: 0.5rem;">
-            <a href={`${BASE_URL}about`} style="color: var(--color-link); text-decoration: none;">See the About page →</a>
-          </p>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">By the numbers</div>
-        <div class="card-body">
-          <ul>
-            <li><span>Total articles</span><span class="date">{all.length}</span></li>
-            <li><span>Categories</span><span class="date">{typeCounts.length}</span></li>
-            {typeCounts.slice(0, 6).map(tc => (
-              <li>
-                <span><a href={`${BASE_URL}category/${tc.type}`} style="color: var(--color-link); text-decoration: none;">{pluralizeType(tc.type)}</a></span>
-                <span class="date">{tc.count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+    <div class="sky-status">
+      <span>{articles.length} pages</span>
+      <a class="gold" href={`${BASE_URL}gaps#stubs`}>{stubCount} stubs</a>
+      <a href={`${BASE_URL}gaps#orphans`}>{orphanCount} orphans</a>
+      <a href={`${BASE_URL}gaps#broken`}>{brokenCount} broken</a>
+      <a class="verd" href={`${BASE_URL}today`}>today {hasToday ? '✓' : '—'}</a>
+      <span>build {buildTime}</span>
     </div>
   </div>
+  <script is:inline define:vars={{ fieldStars }}>
+    const canvas = document.getElementById('sky-canvas');
+    const sky = document.getElementById('sky');
+    const ctx = canvas.getContext('2d');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isMobile = matchMedia('(max-width: 640px)').matches;
+    const field = isMobile ? fieldStars.filter((_, i) => i % 5 === 0) : fieldStars; // sampled sky on mobile
+    let W, H;
+    const t0 = performance.now();
+    function size() { W = canvas.width = sky.clientWidth * devicePixelRatio; H = canvas.height = sky.clientHeight * devicePixelRatio; }
+    function draw(now) {
+      ctx.clearRect(0, 0, W, H);
+      const t = (now - t0) / 1000;
+      for (let i = 0; i < field.length; i++) {
+        const s = field[i];
+        const dx = reduced ? 0 : Math.sin(t / 60 + i) * 0.15; // slow drift, spec §2
+        const x = ((s.x + dx) / 100) * W, y = (s.y / 100) * H;
+        ctx.beginPath();
+        ctx.fillStyle = s.r ? 'rgba(232,198,106,.9)' : s.j ? 'rgba(111,211,199,.6)' : `rgba(255,255,255,${0.18 + ((i * 37) % 20) / 100})`;
+        ctx.arc(x, y, (s.r ? 1.6 : 1) * devicePixelRatio, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (!reduced) requestAnimationFrame(draw);
+    }
+    size(); addEventListener('resize', () => { size(); if (reduced) draw(t0); });
+    reduced ? draw(t0) : requestAnimationFrame(draw);
+  </script>
 </Base>
