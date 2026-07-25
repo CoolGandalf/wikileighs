@@ -1,6 +1,10 @@
 ---
 import { getSearchIndex, getTypeCounts, getStubs, loadAllArticles } from '../lib/vault';
+// The full search index is fetched client-side (see search-index.json.ts) so it
+// isn't inlined into every page once this component is mounted site-wide — only
+// its length (for the placeholder copy) is needed at build time.
 const searchIndex = getSearchIndex();
+const searchIndexCount = searchIndex.length;
 const typeCounts = getTypeCounts();
 const stubCount = getStubs(10_000).length;
 const BASE_URL = import.meta.env.BASE_URL;
@@ -40,7 +44,7 @@ const PINNED = PINNED_ARTICLE_TITLES
     <div class="palette-input-row">
       <span class="palette-caret" aria-hidden="true"></span>
       <input id="palette-input" type="text" autocomplete="off" spellcheck="false"
-        placeholder={`search ${searchIndex.length} pages — or jump below`} aria-label="Search" />
+        placeholder={`search ${searchIndexCount} pages — or jump below`} aria-label="Search" />
       <button class="palette-esc" data-palette-close aria-label="Close">esc</button>
     </div>
     <div id="palette-results" class="palette-results" role="listbox" hidden></div>
@@ -68,13 +72,32 @@ const PINNED = PINNED_ARTICLE_TITLES
   </div>
 </div>
 
-<script is:inline define:vars={{ searchIndex, BASE_URL }}>
+<script is:inline define:vars={{ searchIndexCount, BASE_URL }}>
   (() => {
     const root = document.getElementById('palette-root');
     const input = document.getElementById('palette-input');
     const resultsEl = document.getElementById('palette-results');
     const emptyEl = document.getElementById('palette-empty');
+    const hintEl = root.querySelector('.palette-hint');
     let matches = []; let activeIdx = -1;
+    let lastFocused = null;
+
+    // Search index is fetched lazily on first open — avoids inlining ~400KB+ of
+    // JSON into every page once this component is mounted site-wide (see
+    // src/pages/search-index.json.ts). Cached across opens once loaded.
+    let searchIndex = null;
+    let indexFailed = false;
+    let indexPromise = null;
+    let showLoadingHint = false;
+
+    const loadIndex = () => indexPromise ??= fetch(`${BASE_URL}search-index.json`)
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then((data) => { searchIndex = data; return data; })
+      .catch((err) => {
+        indexFailed = true;
+        if (hintEl) hintEl.textContent = 'index unavailable — reload';
+        throw err;
+      });
 
     const norm = (s) => (s || '').toLowerCase();
     function score(q, item) {
@@ -91,31 +114,81 @@ const PINNED = PINNED_ARTICLE_TITLES
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     function render() {
+      const q = input.value.trim();
+      const has = q !== '';
+      resultsEl.hidden = !has; emptyEl.hidden = has;
+      if (!has) { resultsEl.innerHTML = ''; return; }
+
+      if (indexFailed) {
+        resultsEl.innerHTML = `<div class="palette-status">index unavailable — reload</div>`;
+        return;
+      }
+      if (!searchIndex) {
+        resultsEl.innerHTML = showLoadingHint ? `<div class="palette-status">loading index…</div>` : '';
+        return;
+      }
+      if (!matches.length) {
+        resultsEl.innerHTML = `<div class="palette-status">no matches</div>`;
+        return;
+      }
       resultsEl.innerHTML = matches.map((m, i) => `
-        <a role="option" aria-selected="${i === activeIdx}" class="${i === activeIdx ? 'active' : ''}" href="${BASE_URL}wiki/${m.slug}">
+        <a role="option" aria-selected="${i === activeIdx}" class="${i === activeIdx ? 'active' : ''}" href="${BASE_URL}wiki/${esc(m.slug)}">
           <span class="r-title">${esc(m.title)}</span>
           <span class="r-meta">${esc(m.type)}${m.excerpt ? ' · ' + esc(m.excerpt.slice(0, 60)) : ''}</span>
         </a>`).join('');
-      const has = input.value.trim() !== '';
-      resultsEl.hidden = !has; emptyEl.hidden = has;
     }
     function update() {
       const q = norm(input.value.trim());
-      if (!q) { matches = []; activeIdx = -1; render(); return; }
+      if (!q || !searchIndex) { matches = []; activeIdx = -1; render(); return; }
       matches = searchIndex.map((it) => ({ it, s: score(q, it) }))
         .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 10).map((x) => x.it);
       activeIdx = matches.length ? 0 : -1; render();
     }
-    function open() { root.hidden = false; input.value = ''; update(); requestAnimationFrame(() => input.focus()); }
-    function close() { root.hidden = true; }
+    function open() {
+      lastFocused = document.activeElement;
+      root.hidden = false; input.value = ''; matches = []; activeIdx = -1; showLoadingHint = false;
+      render();
+      requestAnimationFrame(() => input.focus());
+
+      if (!searchIndex && !indexFailed) {
+        const timer = setTimeout(() => {
+          showLoadingHint = true;
+          if (input.value.trim() !== '') render();
+        }, 150);
+        loadIndex().then(() => {
+          clearTimeout(timer);
+          if (input.value.trim() !== '') update();
+        }).catch(() => {
+          clearTimeout(timer);
+          if (input.value.trim() !== '') render();
+        });
+      }
+    }
+    function close() {
+      root.hidden = true;
+      if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
+    }
     window.__paletteOpen = open;
 
     document.addEventListener('keydown', (e) => {
+      if (e.isComposing) return;
       const mod = navigator.platform.startsWith('Mac') ? e.metaKey : e.ctrlKey;
-      if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); root.hidden ? open() : close(); return; }
+      if (mod && e.key.toLowerCase() === 'k') {
+        if (e.repeat) return;
+        e.preventDefault(); root.hidden ? open() : close(); return;
+      }
       if (e.key === '/' && root.hidden && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) { e.preventDefault(); open(); return; }
       if (root.hidden) return;
       if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') {
+        const dialog = root.querySelector('.palette');
+        const focusables = Array.from(dialog.querySelectorAll('a[href], button, input')).filter((el) => el.offsetParent !== null);
+        if (!focusables.length) return;
+        const first = focusables[0], last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        return;
+      }
       if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, matches.length - 1); render(); }
       if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
       if (e.key === 'Enter' && activeIdx >= 0 && matches[activeIdx]) { window.location.href = `${BASE_URL}wiki/${matches[activeIdx].slug}`; }
