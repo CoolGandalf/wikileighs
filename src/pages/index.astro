@@ -49,7 +49,7 @@ const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
     ...l, text, shared,
     leftStyle: `clamp(${halfW}px, ${lx}%, calc(100% - ${halfW}px))`,
     // Shared-center rows stack UPWARD from the base into the gap under the
-    // palette (safe for sky widths ≳590px). Below the 640px breakpoint the
+    // palette (safe for sky heights ≳590px — the binding constraint is height, not width). Below the 640px breakpoint the
     // .stacked mobile override in global.css moves the column to the empty
     // band above the palette instead — labels' px widths don't scale with
     // the viewport, so the two regimes need different homes.
