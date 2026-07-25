@@ -520,6 +520,23 @@ body {
   margin-right: 0.25rem;
 }
 
+/* Greene lessons: pre-redesign link/th parity — the print-homage pages keep
+   their original palette (spec: Greene out of scope). Values are main's old
+   tokens (--color-link / -visited / -broken, --color-rail) inlined.
+   :where(.greene-lesson) keeps each selector at main's exact specificity
+   (.article-body a etc. = 0,1,1), and the block sits BEFORE the Greene
+   design system below, so every .gl-* rule wins or loses ties exactly as
+   it did on main (e.g. .gl-nav a stays crimson via source order). A bare
+   .article-body.greene-lesson selector (0,2,1) would out-rank .gl-nav a
+   and turn the lesson footer nav blue — a state main never rendered. The
+   broken:hover rule pins hover color too (the shared .article-body
+   a.wikilink-broken:hover would otherwise repaint it muted on hover). */
+.article-body:where(.greene-lesson) a { color: #3366cc; }
+.article-body:where(.greene-lesson) a:visited { color: #795cb2; }
+.article-body:where(.greene-lesson) a.wikilink-broken { color: #ba0000; }
+.article-body:where(.greene-lesson) a.wikilink-broken:hover { color: #ba0000; }
+.article-body:where(.greene-lesson) th { background: #f8f9fa; }
+
 /* ============================================================
    GREENE SEMESTER — lesson design system
    Homage to the 48 Laws print design (Elffers): paper, ink,
