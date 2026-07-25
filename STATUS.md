@@ -1,7 +1,28 @@
 # WikiLeighs — STATUS
 
-**Updated:** 2026-04-26 (macbookair, branch `main`) — `/category/project` now status-aware
-**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP, 30-day session). GitHub Actions auto-deploy from main; vault content pulled at build time via `VAULT_READ_TOKEN`. **Vault push now auto-triggers wikileighs deploy** via `repository_dispatch(vault-changed)` (vault-side `notify-wikileighs.yml` + `WIKILEIGHS_DISPATCH_PAT`). **1362 pages built clean.** Today page lives at `/today` (current) + `/today/[date]` (archive); cron-generated hourly snapshot in `journal/today/YYYY-MM-DD.md`.
+**Updated:** 2026-07-25 (macbookair, branch `main`) — **Constellation redesign LIVE**
+**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP). Deployed via merge `0130f77`; **rollback = revert that merge commit.** ~2,494 pages.
+
+## Current design (2026-07-25): "Constellation / The Instrument"
+
+Dark ink + gold/verdigris, IBM Plex Mono chrome + Newsreader reading serif (self-hosted fontsource). Spec: `docs/superpowers/specs/2026-07-24-wikileighs-constellation-redesign-design.md` · Plan (+ Greene parity-verification record): `docs/superpowers/plans/2026-07-24-constellation-redesign.md` · Screenshots: `screenshots/redesign/`.
+
+- **Homepage** = explorable night sky: every page a star (deterministic slug-hash positions, `src/lib/constellation.ts`), gold glow = updated ≤7d (frontmatter, NOT git — CI vault checkout is shallow), hover shows wikilink edge-fans (2,839 edges), wheel zoom / drag pan / click navigates; canvas field + capped-40 DOM stars; status line = vault health → /gaps.
+- **⌘K / Ctrl+K / `/` palette** site-wide; empty state = old left-rail contents; index externalized to `/search-index.json` (lazy-fetched — pages are ~95% lighter than the old inline-index era); typing on the homepage auto-opens seeded; static routes (foundation/today/gaps/…) searchable.
+- **Articles** = reading room: dossier (infobox reborn), sticky scrollable TOC, local-sky 1-hop backlink SVG (`src/lib/localsky.ts`, collision-free layout), true backlink counts, broken wikilinks dimmed+dashed. **Greene lessons untouched by contract** — pixel-parity with pre-redesign main (`:where()` parity block in global.css; do not "clean up" the light literals marked with comments).
+- **Category/tag** = mono indexes, Recent/A–Z toggle; project keeps all 7 status buckets. **Today** = verdigris + illustration wash + calendar archive. **Gaps** = "unlit sky", IDs `#stubs #orphans #broken #stale` stable. **404** = uncharted star (?title= now actually works in prod — was dev-only).
+
+## Known follow-ups
+
+- `/today/archive` is ~25MB (full-res data-URI thumbnails in calendar cells) — chip filed; markers-or-thumbnails fix.
+- Greene `.article-body` decouple (post-redesign refactor) — chip filed; re-run the parity verification after.
+- Deploy workflow: actions target Node 20 (deprecated, forced to 24, working) — bump versions.
+- Homepage vault-health counters (1,079 stubs …) — Leigh may want them muted to /gaps only.
+- First deploy attempt of the redesign timed out in Pages `updating_pages` (transient; prior successful artifacts were 3× larger at 367MB vs ours 123MB). If it recurs: retry via `gh workflow run deploy.yml` before engineering anything.
+
+---
+
+## Pre-redesign history (kept for reference)
 
 ## What was done this session (2026-04-26 afternoon, pre-flight LGA — Cortana)
 
