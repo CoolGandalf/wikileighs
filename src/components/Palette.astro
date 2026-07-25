@@ -1,0 +1,126 @@
+---
+import { getSearchIndex, getTypeCounts, getStubs, loadAllArticles } from '../lib/vault';
+const searchIndex = getSearchIndex();
+const typeCounts = getTypeCounts();
+const stubCount = getStubs(10_000).length;
+const BASE_URL = import.meta.env.BASE_URL;
+
+// Pinned articles are resolved by title against the live vault at build time
+// (same lookup LeftRail.astro uses) rather than hardcoded slugs, so a future
+// rename/retitle of one of these pages degrades gracefully (entry just drops)
+// instead of silently 404ing.
+const PINNED_ARTICLE_TITLES = [
+  'Reading List',
+  'TODO',
+  'Project Status Dashboard',
+  'Trends Index',
+  'Bookshelf',
+];
+
+function normalizeTitle(t: string): string {
+  return t.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+const allArticles = loadAllArticles();
+const articlesByTitle = new Map<string, (typeof allArticles)[0]>();
+for (const a of allArticles) {
+  articlesByTitle.set(normalizeTitle(a.title), a);
+  const slugKey = normalizeTitle(a.slug.replace(/-/g, ' '));
+  if (!articlesByTitle.has(slugKey)) articlesByTitle.set(slugKey, a);
+}
+
+const PINNED = PINNED_ARTICLE_TITLES
+  .map((title) => articlesByTitle.get(normalizeTitle(title)))
+  .filter((a): a is NonNullable<typeof a> => a != null)
+  .map((a) => ({ label: a.title, slug: a.slug }));
+---
+<div id="palette-root" class="palette-root" hidden>
+  <div class="palette-scrim" data-palette-close></div>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Search WikiLeighs">
+    <div class="palette-input-row">
+      <span class="palette-caret" aria-hidden="true"></span>
+      <input id="palette-input" type="text" autocomplete="off" spellcheck="false"
+        placeholder={`search ${searchIndex.length} pages — or jump below`} aria-label="Search" />
+      <button class="palette-esc" data-palette-close aria-label="Close">esc</button>
+    </div>
+    <div id="palette-results" class="palette-results" role="listbox" hidden></div>
+    <div id="palette-empty" class="palette-empty">
+      <div class="palette-col">
+        <div class="palette-col-title">Pinned</div>
+        {PINNED.map(p => <a href={`${BASE_URL}wiki/${p.slug}`}>{p.label}</a>)}
+      </div>
+      <div class="palette-col">
+        <div class="palette-col-title">Categories</div>
+        {typeCounts.map(tc => (
+          <a href={`${BASE_URL}category/${tc.type}`}>{tc.type} <span class="count">{tc.count}</span></a>
+        ))}
+      </div>
+      <div class="palette-col">
+        <div class="palette-col-title">Go</div>
+        <a class="verdigris" href={`${BASE_URL}today`}>today</a>
+        <a href={`${BASE_URL}random`}>random article</a>
+        <a href={`${BASE_URL}gaps`}>gaps <span class="count gold">{stubCount} stubs</span></a>
+        <a href={`${BASE_URL}about`}>about</a>
+        <a href={`${BASE_URL}project-field/`}>foundation</a>
+      </div>
+    </div>
+    <div class="palette-hint">↑↓ navigate · enter open · esc close</div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ searchIndex, BASE_URL }}>
+  (() => {
+    const root = document.getElementById('palette-root');
+    const input = document.getElementById('palette-input');
+    const resultsEl = document.getElementById('palette-results');
+    const emptyEl = document.getElementById('palette-empty');
+    let matches = []; let activeIdx = -1;
+
+    const norm = (s) => (s || '').toLowerCase();
+    function score(q, item) {
+      const n = norm(item.title); const ali = (item.aliases || []).map(norm);
+      if (n === q) return 1000;
+      if (ali.includes(q)) return 900;
+      if (n.startsWith(q)) return 500 - n.length;
+      if (ali.some((a) => a.startsWith(q))) return 450 - item.title.length;
+      if (n.includes(q)) return 200 - n.length;
+      if ((item.tags || []).some((t) => norm(t).includes(q))) return 120;
+      if (norm(item.excerpt).includes(q)) return 80;
+      return 0;
+    }
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function render() {
+      resultsEl.innerHTML = matches.map((m, i) => `
+        <a role="option" aria-selected="${i === activeIdx}" class="${i === activeIdx ? 'active' : ''}" href="${BASE_URL}wiki/${m.slug}">
+          <span class="r-title">${esc(m.title)}</span>
+          <span class="r-meta">${esc(m.type)}${m.excerpt ? ' · ' + esc(m.excerpt.slice(0, 60)) : ''}</span>
+        </a>`).join('');
+      const has = input.value.trim() !== '';
+      resultsEl.hidden = !has; emptyEl.hidden = has;
+    }
+    function update() {
+      const q = norm(input.value.trim());
+      if (!q) { matches = []; activeIdx = -1; render(); return; }
+      matches = searchIndex.map((it) => ({ it, s: score(q, it) }))
+        .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 10).map((x) => x.it);
+      activeIdx = matches.length ? 0 : -1; render();
+    }
+    function open() { root.hidden = false; input.value = ''; update(); requestAnimationFrame(() => input.focus()); }
+    function close() { root.hidden = true; }
+    window.__paletteOpen = open;
+
+    document.addEventListener('keydown', (e) => {
+      const mod = navigator.platform.startsWith('Mac') ? e.metaKey : e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); root.hidden ? open() : close(); return; }
+      if (e.key === '/' && root.hidden && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) { e.preventDefault(); open(); return; }
+      if (root.hidden) return;
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, matches.length - 1); render(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
+      if (e.key === 'Enter' && activeIdx >= 0 && matches[activeIdx]) { window.location.href = `${BASE_URL}wiki/${matches[activeIdx].slug}`; }
+    });
+    input?.addEventListener('input', update);
+    root.querySelectorAll('[data-palette-close]').forEach((el) => el.addEventListener('click', close));
+  })();
+</script>
