@@ -36,7 +36,9 @@ test('newYorkWeekdayShort returns the three-letter name', () => {
 });
 
 test('getAdjacentTodayDates finds the nearest neighbors in an unsorted list', () => {
-  const dates = ['2026-07-24', '2026-07-23', '2026-07-22', '2026-07-21', '2026-07-20'];
+  // Genuinely shuffled (not ascending or descending) so the result can only
+  // be right if the function does not assume pre-sorted input.
+  const dates = ['2026-07-22', '2026-07-20', '2026-07-24', '2026-07-21', '2026-07-23'];
   assert.deepEqual(getAdjacentTodayDates(dates, '2026-07-22'), { prev: '2026-07-21', next: '2026-07-23' });
 });
 

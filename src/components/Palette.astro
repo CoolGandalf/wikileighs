@@ -10,7 +10,7 @@ const stubCount = getStubs(10_000).length;
 const BASE_URL = import.meta.env.BASE_URL;
 
 // Pinned articles are resolved by title against the live vault at build time
-// (same lookup LeftRail.astro uses) rather than hardcoded slugs, so a future
+// (the lookup the old left rail used) rather than hardcoded slugs, so a future
 // rename/retitle of one of these pages degrades gracefully (entry just drops)
 // instead of silently 404ing.
 const PINNED_ARTICLE_TITLES = [
