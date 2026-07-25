@@ -803,6 +803,7 @@ body {
 .palette-results .r-meta { color: var(--t-muted); font-size: 11px; white-space: nowrap; overflow: hidden; }
 .palette-status { padding: 10px 16px; color: var(--t-muted); font-family: var(--font-mono); font-size: 12px; }
 .palette-empty { display: flex; gap: 24px; padding: 14px 16px; }
+.palette-empty[hidden] { display: none; }
 .palette-col { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .palette-col-title { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
 .palette-col a { color: var(--t-body); text-decoration: none; font-size: 13px; line-height: 1.9; }
