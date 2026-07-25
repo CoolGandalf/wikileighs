@@ -872,3 +872,7 @@ body {
 .sky-status a:hover, .sky-status a:focus-visible { color: var(--gold); text-decoration: underline; }
 .sky-status a.gold { color: var(--gold); }
 .sky-status a.verd, .sky-status .verd { color: var(--verdigris); }
+
+.local-sky { margin-top: 24px; border-top: 1px solid var(--gold-hairline); padding-top: 14px; }
+.local-sky-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; color: var(--t-muted); margin-bottom: 8px; }
+.local-sky svg { width: 100%; height: auto; }
