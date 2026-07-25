@@ -11,7 +11,6 @@ import {
   resolveWikilink,
   slugify,
   humanizeType,
-  isStub,
 } from '../../lib/vault';
 
 export async function getStaticPaths() {
@@ -34,7 +33,6 @@ const hasPortraitInfobox = article.type === 'person' || article.type === 'figure
 
 const skyNeighbors = incoming.map(a => ({ slug: a.slug, title: a.title, journal: a.type === 'journal' || a.type === 'voice-memo' }));
 const readMinutes = Math.max(1, Math.round(((article.html || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length) / 220));
-const isStubArticle = isStub(article);
 
 const editSubject = encodeURIComponent(`[cc:Mac] WikiLeighs edit: ${article.title}`);
 const editBody = encodeURIComponent(
@@ -105,10 +103,10 @@ function escapeHtml(s: string): string {
         <h1 class="room-title">{article.title}</h1>
         <div class="room-meta">
           updated <span class="verd">{article.updated || article.created || '—'}</span>
-          · {backlinkCount} backlinks · {readMinutes} min ·
+          · {backlinkCount} {backlinkCount === 1 ? 'backlink' : 'backlinks'} · {readMinutes} min ·
           <a class="suggest" href={editMailto}>✎ suggest edit</a>
         </div>
-        {isStubArticle && <StubBanner article={article} />}
+        <StubBanner article={article} />{/* self-guards via isStub */}
         {article.photo && !hasPortraitInfobox && (
           <figure class="today-hero">
             <img src={article.photo} alt={article.title} loading="lazy" />

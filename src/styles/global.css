@@ -4,6 +4,8 @@
 @import '@fontsource/newsreader/400.css';
 @import '@fontsource/newsreader/400-italic.css';
 @import '@fontsource/newsreader/500.css';
+@import '@fontsource/newsreader/600.css';
+@import '@fontsource/newsreader/700.css';
 @import './tokens.css';
 
 @tailwind base;
@@ -117,6 +119,7 @@ body {
 .article-body:not(.greene-lesson) a.wikilink-broken { border-bottom: 1px dashed rgba(139, 147, 165, 0.4); }
 .article-body:not(.greene-lesson) a.wikilink-broken:hover { text-decoration: none; border-bottom-color: var(--t-muted); }
 
+/* Greene palette on main — do not migrate to tokens */
 .article-body pre {
   background: #f6f6f6;
   border: 1px solid var(--color-border-light);
@@ -134,6 +137,7 @@ body {
   border-radius: 7px;
 }
 
+/* Greene palette on main — do not migrate to tokens */
 .article-body code {
   background: #f6f6f6;
   border: 1px solid var(--color-border-light);
@@ -164,6 +168,7 @@ body {
   color: var(--t-secondary);
 }
 
+/* Greene palette on main — do not migrate to tokens */
 .article-body table {
   border-collapse: collapse;
   margin: 0.75rem 0;
@@ -763,10 +768,11 @@ body {
 .room-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--t-muted); margin-bottom: 18px; }
 .room-meta .verd { color: var(--verdigris); }
 .room-meta .suggest { color: var(--gold); opacity: 0.7; text-decoration: none; }
-.room-side { position: sticky; top: 24px; align-self: start; display: flex; flex-direction: column; gap: 18px; }
+.room-side { position: sticky; top: 24px; align-self: start; display: flex; flex-direction: column; gap: 18px;
+  max-height: calc(100vh - 48px); overflow-y: auto; overscroll-behavior: contain; }
 .dossier { background: var(--raised); border: 1px solid var(--gold-hairline); border-radius: 8px; padding: 12px 14px; }
 .dossier-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
-.dossier dl { font-family: var(--font-mono); font-size: 12px; }
+.dossier dl { font-family: var(--font-mono); font-size: 12px; display: flow-root; }
 .dossier dt { color: var(--t-muted); float: left; clear: left; margin-right: 8px; }
 .dossier dd { color: var(--t-heading); margin: 0 0 4px 0; overflow-wrap: anywhere; }
 .dossier dd a { color: var(--gold); text-decoration: none; }
