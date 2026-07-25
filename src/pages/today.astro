@@ -1,27 +1,43 @@
 ---
 import Base from '../layouts/Base.astro';
-import { newYorkDateLabel, newYorkDateStamp, shiftDateStamp } from '../lib/date';
-import { getTodayPage } from '../lib/vault';
+import { newYorkDateLabel, newYorkDateStamp, newYorkWeekdayShort } from '../lib/date';
+import { getTodayPage, getAdjacentTodayDates } from '../lib/vault';
 
 const today = new Date();
 const todayPage = getTodayPage(today);
 const todayStamp = newYorkDateStamp(today);
 const headerDate = newYorkDateLabel(today).replace(/^([^ ]+) /, '$1, ');
+const navDateCaps = newYorkDateLabel(today).toUpperCase();
 const BASE_URL = import.meta.env.BASE_URL;
 
-// Derive yesterday from the New York calendar stamp, not the runner's UTC day.
-const yesterdayStamp = shiftDateStamp(todayStamp, -1);
+// today is always the most recent day by definition, so there is never a
+// next-page date here — only prev, sourced from the same listTodayPageDates()
+// the archive uses (skips gap days automatically).
+const { prev } = getAdjacentTodayDates(todayStamp);
+const prevLabel = prev ? newYorkWeekdayShort(prev).toLowerCase() : null;
 ---
 <Base title="Today" description={`Daily snapshot for ${headerDate}.`}>
-  <div class="breadcrumb"><a href={BASE_URL}>Main page</a> · Today · <a href={`${BASE_URL}today/archive`}>Archive ▸</a></div>
+  <nav class="today-nav" aria-label="Daily snapshot navigation">
+    {prev && (
+      <>
+        <a href={`${BASE_URL}today/${prev}/`} title={prev}>← {prevLabel}</a>
+        {' · '}
+      </>
+    )}
+    <span class="now">{navDateCaps}</span>
+    {' · '}
+    <span class="unwritten">tomorrow is unwritten →</span>
+    {' · '}
+    <a href={`${BASE_URL}today/archive`}>archive</a>
+  </nav>
   {todayPage ? (
     <article class="article-body">
       {todayPage.photo && (
-        <figure class="today-hero">
-          <img src={todayPage.photo} alt={`Today's hero — ${todayPage.created || 'today'}`} loading="lazy" />
-        </figure>
+        <div class="today-wash">
+          <img src={todayPage.photo} alt={`Today's hero — ${todayPage.created || todayStamp}`} loading="lazy" />
+          <span class="wash-caption">{todayPage.created || todayStamp}</span>
+        </div>
       )}
-      <p class="today-archive-link"><a href={`${BASE_URL}today/archive`}>↗ All daily snapshots</a></p>
       <Fragment set:html={todayPage.html} />
     </article>
   ) : (
@@ -29,9 +45,6 @@ const yesterdayStamp = shiftDateStamp(todayStamp, -1);
       <h1>{headerDate}</h1>
       <p style="color: var(--color-muted);">
         <em>Today's snapshot hasn't been generated yet. The next refresh fires at the top of each hour from 7 AM to 11 PM EDT.</em>
-      </p>
-      <p>
-        Meanwhile: <a href={`${BASE_URL}today/${yesterdayStamp}`}>Yesterday's snapshot ▸</a>
       </p>
     </article>
   )}

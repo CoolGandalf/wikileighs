@@ -29,3 +29,25 @@ export function shiftDateStamp(stamp: string, days: number): string {
     String(date.getUTCDate()).padStart(2, '0'),
   ].join('-');
 }
+
+const WEEKDAY_SHORT_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Short weekday name ("Wed") for a YYYY-MM-DD stamp, evaluated in the New
+ * York calendar. Anchors at noon with an explicit -04:00 offset — the same
+ * pattern today/[date].astro already uses to parse the date route param —
+ * so the weekday never rolls to an adjacent day under a UTC build runner.
+ */
+export function newYorkWeekdayShort(stamp: string): string {
+  const parsed = new Date(`${stamp}T12:00:00-04:00`);
+  return parsed.toLocaleDateString('en-US', { weekday: 'short', timeZone: LEIGH_TIME_ZONE });
+}
+
+/**
+ * 0 (Sun) – 6 (Sat) for a YYYY-MM-DD stamp, using the same NY-safe anchoring
+ * as newYorkWeekdayShort(). Backs the today/archive calendar's leading-blank
+ * cell count so weekday columns line up without raw new Date() UTC parsing.
+ */
+export function newYorkWeekdayIndex(stamp: string): number {
+  return WEEKDAY_SHORT_NAMES.indexOf(newYorkWeekdayShort(stamp));
+}

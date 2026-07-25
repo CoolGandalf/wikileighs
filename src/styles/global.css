@@ -502,18 +502,6 @@ body {
 
 .breadcrumb a:hover { text-decoration: underline; }
 
-/* Inline "all snapshots" link inside today / today/<date> articles */
-.today-archive-link {
-  margin: 0 0 0.75rem;
-  font-size: 0.85rem;
-  text-align: right;
-}
-.today-archive-link a {
-  color: var(--color-link);
-  text-decoration: none;
-}
-.today-archive-link a:hover { text-decoration: underline; }
-
 .tag-chip {
   display: inline-block;
   padding: 0 0.45rem;
@@ -819,4 +807,29 @@ body {
 .idx-excerpt { color: var(--t-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bucket-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--gold); margin: 16px 0 4px; }
+
+/* ---- /today, /today/[date], /today/archive (spec §6, verdigris domain) ---- */
+.today-nav { font-family: var(--font-mono); font-size: 11.5px; color: var(--verdigris); margin-bottom: 8px; }
+.today-nav a { color: var(--verdigris); text-decoration: none; opacity: 0.75; }
+.today-nav a:hover { opacity: 1; text-decoration: underline; }
+.today-nav .now { font-weight: 600; }
+.today-nav .unwritten { opacity: 0.5; }
+
+.today-wash { position: relative; border-radius: 10px; overflow: hidden; margin-bottom: 14px; min-height: 160px; }
+.today-wash img { position: absolute; right: 0; top: 0; width: 46%; height: 100%; object-fit: cover; opacity: 0.6;
+  mask-image: linear-gradient(105deg, transparent 0%, #000 45%); -webkit-mask-image: linear-gradient(105deg, transparent 0%, #000 45%); }
+.today-wash::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(11,14,20,.75) 100%); pointer-events: none; }
+.today-wash .wash-caption { position: absolute; left: 14px; bottom: 10px; font-family: var(--font-serif); font-style: italic; font-size: 13px; color: rgba(240,230,210,.85); z-index: 1; }
+
+.cal-month-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--verdigris); margin: 18px 0 6px; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; max-width: 560px; }
+.cal-day { aspect-ratio: 1; border: 1px solid rgba(139, 147, 165, 0.14); border-radius: 6px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--t-muted); padding: 4px;
+  position: relative; background-size: cover; background-position: center; text-decoration: none; display: block; }
+.cal-day.written { color: var(--t-body); }
+.cal-day.written::after { content: ''; position: absolute; right: 5px; bottom: 5px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--verdigris); }
+.cal-day.illustrated { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+.cal-day.illustrated::before { content: ''; position: absolute; inset: 0; background: rgba(11,14,20,.35); border-radius: 6px; }
+.cal-day:not(.written) { opacity: 0.35; pointer-events: none; }
 @media (max-width: 640px) { .idx-title { flex: 0 0 60%; } .idx-excerpt { display: none; } }
