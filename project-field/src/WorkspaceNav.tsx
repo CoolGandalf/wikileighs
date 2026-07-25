@@ -8,9 +8,15 @@ const links = [
   { id: "knowledge", label: "Knowledge", href: "#/knowledge" },
 ];
 
+// Way back out of the sub-app (feedback round 1): vite's BASE_URL is
+// "/wikileighs/project-field/", so stripping the app segment yields the
+// wikileighs root in every deployment (prod subpath and local preview alike).
+const wikiHome = import.meta.env.BASE_URL.replace(/project-field\/?$/, "");
+
 export function WorkspaceNav({ active, action }: { active: string; action?: ReactNode }) {
   return (
     <header className="topbar workspace-topbar">
+      <a className="wiki-back" href={wikiHome} aria-label="Back to WikiLeighs">← wikileighs</a>
       <a className="brand" href="#/" aria-label="Leigh's workspace home">
         <span className="brand-mark">L</span>
         <span>PROJECT / FIELD</span>

@@ -1,225 +1,369 @@
 ---
 import Base from '../layouts/Base.astro';
-import { newYorkDateLabel, newYorkDateStamp } from '../lib/date';
-import {
-  loadAllArticles,
-  getTypeCounts,
-  getRecentlyUpdated,
-  getFeaturedArticle,
-  getArticlesByType,
-  getTodayPage,
-  getLatestUploadHero,
-  humanizeType,
-  pluralizeType,
-} from '../lib/vault';
+import { loadAllArticles, getTypeCounts, getStubs, getOrphans, getBrokenWikilinks, getTodayPage } from '../lib/vault';
+import { starPosition, clusterCenter, isRecent, buildEdges } from '../lib/constellation';
 
-const all = loadAllArticles();
-const typeCounts = getTypeCounts();
-const recentlyUpdated = getRecentlyUpdated(8);
-const featured = getFeaturedArticle();
-const heroPhoto = getLatestUploadHero();
-
-// Today block — always anchored to Leigh's local day, including UTC CI runners.
-const todayDate = new Date();
-const todayPage = getTodayPage(todayDate);
-const todayStamp = newYorkDateStamp(todayDate);
-const todayLabel = newYorkDateLabel(todayDate);
-
-// Extract briefing first paragraph from today's bodyMd
-function extractBriefingParagraph(bodyMd: string): string {
-  const lines = bodyMd.split('\n');
-  const idx = lines.findIndex((l) => /^##\s+Briefing/i.test(l.trim()));
-  if (idx < 0) return '';
-  const buf: string[] = [];
-  let started = false;
-  for (let i = idx + 1; i < lines.length; i++) {
-    const t = lines[i].trim();
-    if (!t) {
-      if (started) break;
-      continue;
-    }
-    if (t.startsWith('#')) { if (started) break; continue; }
-    started = true;
-    buf.push(t);
-  }
-  return buf
-    .join(' ')
-    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_: string, tgt: string, alias: string) => alias || tgt)
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[*_`]/g, '')
-    .slice(0, 420);
-}
-
-function extractTodayStats(bodyMd: string): { voiceMemos: number; photos: number; agentRuns: number | null } {
-  const vmMatch = bodyMd.match(/###\s+Voice memos\s+\((\d+)\)/i);
-  const voiceMemos = vmMatch ? parseInt(vmMatch[1], 10) : 0;
-
-  const photoCapturesMatch = bodyMd.match(/(\d+)\s+captures?/i);
-  const photos = photoCapturesMatch ? parseInt(photoCapturesMatch[1], 10) : 0;
-
-  const agentTotalMatch = bodyMd.match(/(\d+)\s+total\s+runs?/i);
-  let agentRuns: number | null = null;
-  if (agentTotalMatch) {
-    agentRuns = parseInt(agentTotalMatch[1], 10);
-  } else {
-    // Fallback: count lines like **AgentName** — N runs
-    const runLines = bodyMd.match(/\*\*[^*]+\*\*\s*—\s*\d+\s+runs?/g);
-    if (runLines && runLines.length > 0) {
-      let total = 0;
-      for (const l of runLines) {
-        const m = l.match(/(\d+)\s+runs?/);
-        if (m) total += parseInt(m[1], 10);
-      }
-      agentRuns = total > 0 ? total : null;
-    }
-  }
-
-  return { voiceMemos, photos, agentRuns };
-}
-
-const todayBriefing = todayPage
-  ? (extractBriefingParagraph(todayPage.bodyMd) || todayPage.firstParagraph)
-  : '';
-const todayStats = todayPage ? extractTodayStats(todayPage.bodyMd) : null;
-
-const categoriesForBrowse = typeCounts
-  .map(tc => ({
-    ...tc,
-    articles: getArticlesByType(tc.type).slice(0, 12),
-    total: tc.count,
-  }))
-  .filter(c => c.articles.length);
 const BASE_URL = import.meta.env.BASE_URL;
+const articles = loadAllArticles();
+const typeCounts = getTypeCounts();
+const stubCount = getStubs(10_000).length;
+const orphanCount = getOrphans(10_000).length;
+const brokenCount = getBrokenWikilinks(10_000).length;
+const hasToday = getTodayPage(new Date()) != null;
+
+// Client payload (Explorable Sky, feedback round 2): every star now carries
+// slug + title so the canvas layer can hit-test, tooltip, and navigate —
+// not just geometry + color class. Coords stay 2-dp.
+const fieldStars = articles.map(a => {
+  const p = starPosition(a.slug, a.type);
+  return { x: +p.x.toFixed(2), y: +p.y.toFixed(2),
+    r: isRecent(a.updated), j: a.type === 'journal' || a.type === 'voice-memo',
+    s: a.slug, t: a.title };
+});
+// Resolved-wikilink adjacency as flat index pairs into fieldStars (deduped,
+// self-links dropped — see buildEdges). Powers the hover edge lighting.
+const edges = buildEdges(articles);
+const slugIdx = new Map(articles.map((a, i) => [a.slug, i]));
+// Interactive DOM stars: the 40 most recently updated of the glow set (spec §3 cap).
+// `i` indexes fieldStars so a hovered DOM star lights the same canvas edges.
+const glowing = articles.filter(a => isRecent(a.updated))
+  .sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 40)
+  .map(a => { const p = starPosition(a.slug, a.type); return { slug: a.slug, title: a.title, x: p.x, y: p.y, journal: a.type === 'journal' || a.type === 'voice-memo', i: slugIdx.get(a.slug) ?? -1 }; });
+// While zoomed the DOM glow layer hides; the canvas re-renders these indices as glow stars.
+const glowIdx = glowing.map(g => g.i).filter(i => i >= 0);
+// Label geometry, correct by construction:
+// - x clamped to 8–92% AND to the label's own half-width in px, so long
+//   labels (VOICE-MEMO at x=8) stay fully on-canvas at any viewport width.
+// - a label whose above-cluster spot lands in the palette's vertical band
+//   (28–42%) flips below its cluster instead of hiding under the button.
+// - types without their own cluster share the misc center; those labels
+//   render as fixed-pixel stacked rows OFFSET LEFT of the misc cluster
+//   (geometry lives in .cluster-label.stacked in global.css — measured
+//   feedback-round-1 fix: rows centered on the cluster overprinted its
+//   stars). Only --row + the lead-row class are emitted here; the row-0
+//   label carries a leader dash pointing at the cluster it names.
+const centerCounts = new Map<string, number>();
+const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
+  const c = clusterCenter(tc.type);
+  const key = `${c.x},${c.y}`;
+  const stack = centerCounts.get(key) ?? 0;
+  centerCounts.set(key, stack + 1);
+  return { ...tc, c, key, stack };
+}).map(l => {
+  const text = `${l.type.toUpperCase()} · ${l.count}`;
+  const halfW = Math.ceil((text.length * 8.3) / 2); // 10px mono + 0.22em tracking ≈ 8.3px/char
+  const lx = Math.min(92, Math.max(8, l.c.x));
+  let lt = Math.max(2, l.c.y - l.c.ry - 4);
+  if (lt >= 28 && lt <= 42) lt = l.c.y + l.c.ry + 2; // palette band → below cluster
+  const shared = (centerCounts.get(l.key) ?? 1) > 1;
+  return {
+    ...l, text, shared,
+    styleAttr: shared
+      ? `--row:${l.stack}`
+      : `left:clamp(${halfW}px, ${lx}%, calc(100% - ${halfW}px));top:${lt}%`,
+  };
+});
+const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' });
 ---
-<Base title="Main page">
-  <section class="welcome-block">
-    <h1 class="welcome-title">Welcome to WikiLeighs,</h1>
-    <p style="font-size: 15px; line-height: 1.6;">
-      the free encyclopedia that Leigh is writing. {all.length} articles across {typeCounts.length} categories,
-      rendered from the <code>notes/</code> subtree of his Obsidian vault.
-    </p>
-  </section>
-
-  <section class="today-block">
-    <h2 class="today-block-heading">Today, {todayLabel}</h2>
-    {todayPage ? (
-      <div>
-        {todayBriefing && <p class="today-briefing">{todayBriefing}</p>}
-        {todayStats && (
-          <p class="today-stats">
-            {todayStats.voiceMemos > 0 && <span>{todayStats.voiceMemos} voice memo{todayStats.voiceMemos !== 1 ? 's' : ''}</span>}
-            {todayStats.voiceMemos > 0 && todayStats.photos > 0 && <span class="today-stats-sep"> · </span>}
-            {todayStats.photos > 0 && <span>{todayStats.photos} photo{todayStats.photos !== 1 ? 's' : ''}</span>}
-            {(todayStats.voiceMemos > 0 || todayStats.photos > 0) && todayStats.agentRuns !== null && <span class="today-stats-sep"> · </span>}
-            {todayStats.agentRuns !== null && <span>{todayStats.agentRuns} agent run{todayStats.agentRuns !== 1 ? 's' : ''}</span>}
-          </p>
-        )}
-        <p class="today-read-more">
-          <a href={`${BASE_URL}today/${todayStamp}`}>Read full snapshot →</a>
-        </p>
-      </div>
-    ) : (
-      <div>
-        <p class="today-briefing" style="color: var(--color-muted); font-style: italic;">
-          Today's snapshot hasn't generated yet. Next refresh top of the hour.
-        </p>
-        <p class="today-read-more">
-          <a href={`${BASE_URL}today`}>View recent snapshots →</a>
-        </p>
-      </div>
-    )}
-  </section>
-
-  <div class="contents-row">
-    <div>
-      {featured && (
-        <section class="featured-block">
-          <div class="featured-header">Featured article</div>
-          <div class="featured-body">
-            {heroPhoto ? (
-              <figure class="featured-hero">
-                <img src={heroPhoto.src} alt={`Latest upload — ${heroPhoto.date}`} loading="lazy" />
-                <figcaption>{heroPhoto.date}</figcaption>
-              </figure>
-            ) : (
-              <div class="featured-image-placeholder" aria-hidden="true"></div>
-            )}
-            <span class="featured-title"><a href={`${BASE_URL}wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">{featured.title}</a></span>
-            {' '}— {featured.firstParagraph}
-            {' '}
-            <a href={`${BASE_URL}wiki/${featured.slug}`} style="color: var(--color-link); text-decoration: none;">(continue reading...)</a>
-            <div style="clear: both;"></div>
-          </div>
-        </section>
-      )}
-
-      {recentlyUpdated.length > 0 && (
-        <section class="browse-block recently-updated-block">
-          <h2 class="browse-title">Recently updated</h2>
-          <ul class="recently-updated-list">
-            {recentlyUpdated.map(a => (
-              <li>
-                <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-                <span class="tag-chip">{humanizeType(a.type)}</span>
-                <span class="date">{a.updated}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section class="browse-block">
-        <h2 class="browse-title">Browse by category</h2>
-        <div class="browse-grid">
-          {categoriesForBrowse.map(cat => (
-            <div class="browse-category">
-              <h3><a href={`${BASE_URL}category/${cat.type}`} style="color: inherit; text-decoration: none;">{pluralizeType(cat.type)}</a></h3>
-              <ul>
-                {cat.articles.map(a => (
-                  <li>
-                    <a href={`${BASE_URL}wiki/${a.slug}`}>{a.title}</a>
-                    <span class="type"> — {humanizeType(a.type)}</span>
-                  </li>
-                ))}
-                {cat.total > cat.articles.length && (
-                  <li><a href={`${BASE_URL}category/${cat.type}`} style="color: var(--color-muted);">...and {cat.total - cat.articles.length} more</a></li>
-                )}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+<Base title="Home" bleed>
+  <div class="sky" id="sky">
+    <p class="sr-only">The star canvas is a pointer-only exploration layer; to browse by keyboard, use the search palette (press / or ⌘K) or the highlighted recent-page star links below.</p>
+    <canvas id="sky-canvas" aria-hidden="true"></canvas>
+    {clusterLabels.map(l => (
+      <a class={`cluster-label${l.shared ? ' stacked' : ''}${l.shared && l.stack === 0 ? ' stacked-lead' : ''}`}
+         style={l.styleAttr}
+         href={`${BASE_URL}category/${l.type}`}>{l.text}</a>
+    ))}
+    {glowing.map(s => (
+      <a class={`star-dom ${s.journal ? 'verd' : ''}`} style={`left:${s.x}%;top:${s.y}%`} data-i={s.i}
+         href={`${BASE_URL}wiki/${s.slug}`} aria-label={s.title}><span class="tip">{s.title}</span></a>
+    ))}
+    <div id="sky-tip" class="sky-tip" aria-hidden="true" hidden></div>
+    <button type="button" id="sky-reset" class="sky-reset" hidden>reset view · esc</button>
+    <div class="sky-palette-slot">
+      <button type="button" class="sky-open-palette" onclick="window.__paletteOpen && window.__paletteOpen()">
+        <span class="palette-caret"></span> type to jump — <span data-key-hint>⌘K</span> anywhere
+      </button>
     </div>
-
-    <div>
-      <section class="card">
-        <div class="card-header">About WikiLeighs</div>
-        <div class="card-body">
-          <p>
-            WikiLeighs is a personal encyclopedia — everything I'm consuming, doing, and thinking about.
-            It's Leigh's Obsidian vault, rendered as a browsable web reader inspired by Wikipedia and Farzapedia.
-          </p>
-          <p style="margin-top: 0.5rem;">
-            <a href={`${BASE_URL}about`} style="color: var(--color-link); text-decoration: none;">See the About page →</a>
-          </p>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-header">By the numbers</div>
-        <div class="card-body">
-          <ul>
-            <li><span>Total articles</span><span class="date">{all.length}</span></li>
-            <li><span>Categories</span><span class="date">{typeCounts.length}</span></li>
-            {typeCounts.slice(0, 6).map(tc => (
-              <li>
-                <span><a href={`${BASE_URL}category/${tc.type}`} style="color: var(--color-link); text-decoration: none;">{pluralizeType(tc.type)}</a></span>
-                <span class="date">{tc.count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+    <div class="sky-status">
+      <span>{articles.length} pages</span>
+      <a class="gold" href={`${BASE_URL}gaps#stubs`}>{stubCount} stubs</a>
+      <a href={`${BASE_URL}gaps#orphans`}>{orphanCount} orphans</a>
+      <a href={`${BASE_URL}gaps#broken`}>{brokenCount} broken</a>
+      <a class="verd" href={`${BASE_URL}today`}>today {hasToday ? '✓' : '—'}</a>
+      <span>build {buildTime}</span>
     </div>
   </div>
+  <script is:inline define:vars={{ fieldStars, edges, glowIdx, BASE_URL }}>
+    const canvas = document.getElementById('sky-canvas');
+    const sky = document.getElementById('sky');
+    const tip = document.getElementById('sky-tip');
+    const resetChip = document.getElementById('sky-reset');
+    const ctx = canvas.getContext('2d');
+    const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+    let reduced = motionQuery.matches;
+    const isMobile = matchMedia('(max-width: 640px)').matches;
+    // Explore layer (hover edges, wheel zoom, drag pan) is desktop-pointer
+    // only: touch devices and small screens keep the sampled ambient sky
+    // exactly as before — no listeners are even attached there.
+    const canExplore = !isMobile && matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const field = isMobile ? fieldStars.filter((_, i) => i % 5 === 0) : fieldStars; // sampled sky on mobile
+
+    // View state: screen = world · scale + pan, world = %-coords in CSS px.
+    // scale ∈ [1,6]; pan clamped so the sky never shows void past its bounds.
+    const MAX_SCALE = 6;
+    let scale = 1, panX = 0, panY = 0;
+    let hoverIdx = -1;   // fieldStars index under the pointer (-1 = none)
+    let driftT = 0;      // drift time (s) of the last draw — hit test reuses it
+    let W, H, rafId = 0, frame = 0, kickId = 0;
+    let dragging = false, dragMoved = false, pid = 0, downX = 0, downY = 0, downPanX = 0, downPanY = 0;
+    const t0 = performance.now();
+
+    // Adjacency from the flat [i0,j0,i1,j1,…] resolved-wikilink pairs.
+    // Desktop only — the indices address fieldStars, which === field there.
+    let adj = null;
+    if (canExplore) {
+      adj = fieldStars.map(() => []);
+      for (let k = 0; k < edges.length; k += 2) {
+        adj[edges[k]].push(edges[k + 1]);
+        adj[edges[k + 1]].push(edges[k]);
+      }
+    }
+
+    function size() {
+      const dpr = devicePixelRatio || 1;
+      W = sky.clientWidth; H = sky.clientHeight;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS px from here on
+      clampPan();
+    }
+    function clampPan() {
+      panX = Math.min(0, Math.max(W - W * scale, panX));
+      panY = Math.min(0, Math.max(H - H * scale, panY));
+    }
+    // Drift freezes while zoomed so star positions never move under the
+    // cursor; at scale 1 the hit test recomputes this same dx per star.
+    function starDx(i, t) {
+      return (reduced || scale > 1) ? 0 : Math.sin((2 * Math.PI * t) / 60 + i) * 0.35; // true ~60s drift period, spec §2
+    }
+    function screenX(s, dx) { return ((s.x + dx) / 100) * W * scale + panX; }
+    function screenY(s) { return (s.y / 100) * H * scale + panY; }
+
+    function draw(now) {
+      ctx.clearRect(0, 0, W, H);
+      const t = (now - t0) / 1000;
+      driftT = t;
+      const zoomed = scale > 1;
+      for (let i = 0; i < field.length; i++) {
+        const s = field[i];
+        const dx = starDx(i, t);
+        const tw = reduced ? 0 : Math.sin(t / (3 + (i % 5)) + i * 1.7) * 0.1; // per-star twinkle (alpha only — stays on while zoomed)
+        const x = screenX(s, dx), y = screenY(s);
+        if (zoomed && (x < -4 || x > W + 4 || y < -4 || y > H + 4)) continue;
+        ctx.beginPath();
+        ctx.fillStyle = s.r ? 'rgba(232,198,106,.9)' : s.j ? 'rgba(111,211,199,.6)' : `rgba(255,255,255,${0.18 + ((i * 37) % 20) / 100 + tw})`;
+        ctx.arc(x, y, s.r ? 1.6 : 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // While zoomed the %-positioned DOM glow stars are hidden (they can't
+      // track the canvas transform), so their glow renders here instead —
+      // same colors and sizes as .star-dom::after (6px dot + 10px halo).
+      if (zoomed) {
+        for (const gi of glowIdx) {
+          const s = fieldStars[gi];
+          const x = screenX(s, 0), y = screenY(s);
+          if (x < -16 || x > W + 16 || y < -16 || y > H + 16) continue;
+          ctx.save();
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = s.j ? 'rgba(111,211,199,.35)' : 'rgba(232,198,106,.4)';
+          ctx.fillStyle = s.j ? '#6fd3c7' : '#e8c66a';
+          ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
+      }
+      // Hover: light this star's wikilink edges + brighten its neighbors.
+      // LocalSky's language: verdigris lines to journal neighbors (0.3),
+      // gold to everything else (0.25).
+      if (hoverIdx >= 0 && adj) {
+        const hs = fieldStars[hoverIdx];
+        const hx = screenX(hs, starDx(hoverIdx, t)), hy = screenY(hs);
+        ctx.lineWidth = 1;
+        for (const ni of adj[hoverIdx]) {
+          const ns = fieldStars[ni];
+          const nx = screenX(ns, starDx(ni, t)), ny = screenY(ns);
+          ctx.strokeStyle = ns.j ? 'rgba(111,211,199,.3)' : 'rgba(232,198,106,.25)';
+          ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(nx, ny); ctx.stroke();
+          ctx.fillStyle = ns.j ? 'rgba(111,211,199,.9)' : ns.r ? 'rgba(232,198,106,1)' : 'rgba(255,255,255,.75)';
+          ctx.beginPath(); ctx.arc(nx, ny, ns.r ? 2 : 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = hs.j ? '#6fd3c7' : '#e8c66a';
+        ctx.beginPath(); ctx.arc(hx, hy, hs.r ? 2.6 : 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    function loop(now) { frame++; if (frame % 2) draw(now); rafId = requestAnimationFrame(loop); } // ~30fps: draw every other tick
+    function start() {
+      cancelAnimationFrame(rafId);
+      if (reduced) draw(performance.now());
+      else rafId = requestAnimationFrame(loop);
+    }
+    // Interaction redraw: next-frame, coalesced — zoom/pan/hover respond
+    // immediately instead of waiting on the 30fps ambient gate. Under
+    // reduced motion this is the only redraw path (all user-initiated).
+    function kick() {
+      if (kickId) return;
+      kickId = requestAnimationFrame((now) => { kickId = 0; draw(now); });
+    }
+    motionQuery.addEventListener('change', () => { reduced = motionQuery.matches; start(); });
+    size(); addEventListener('resize', () => { size(); kick(); });
+    start();
+
+    // ---- Explorable Sky (desktop pointer only) ----------------------------
+    const HIT_R = 10, DRAG_T = 5; // screen-space px: hover radius / click-vs-drag threshold
+    function syncZoomUI() {
+      // Past scale 1 the %-positioned DOM stars + cluster labels desync from
+      // the canvas transform, so CSS hides them (.zoomed); they reappear on
+      // reset. Status line + palette are chrome — fixed, never transformed.
+      sky.classList.toggle('zoomed', scale > 1);
+      resetChip.hidden = scale <= 1;
+    }
+    function setScale(next, cx, cy) {
+      const s2 = Math.min(MAX_SCALE, Math.max(1, next));
+      // Zoom toward the cursor: the world point under (cx,cy) stays put.
+      panX = cx - ((cx - panX) / scale) * s2;
+      panY = cy - ((cy - panY) / scale) * s2;
+      scale = s2;
+      clampPan(); syncZoomUI(); kick();
+    }
+    function resetView() {
+      scale = 1; panX = 0; panY = 0; hoverIdx = -1;
+      hideTip(); syncZoomUI(); sky.style.cursor = ''; kick();
+    }
+    // Plain linear scan: measured ~0.03ms per move event over 1,574 stars —
+    // a spatial grid would be overhead with no observable win at this n.
+    function hitTest(px, py) {
+      let best = -1, bestD = HIT_R * HIT_R;
+      for (let i = 0; i < fieldStars.length; i++) {
+        const s = fieldStars[i];
+        const ddx = screenX(s, starDx(i, driftT)) - px, ddy = screenY(s) - py;
+        const d = ddx * ddx + ddy * ddy;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return best;
+    }
+    function showTip(i) {
+      const s = fieldStars[i];
+      tip.textContent = s.t;
+      tip.hidden = false;
+      const x = screenX(s, starDx(i, driftT)), y = screenY(s);
+      tip.style.left = Math.min(Math.max(4, x + 12), W - tip.offsetWidth - 4) + 'px';
+      tip.style.top = (y < 30 ? y + 14 : y - 26) + 'px';
+    }
+    function hideTip() { tip.hidden = true; }
+    function localXY(e) {
+      const r = sky.getBoundingClientRect();
+      return [e.clientX - r.left, e.clientY - r.top];
+    }
+    function updateHover(e) {
+      let hit = -1, domTip = false;
+      if (e.target === canvas) {
+        const [px, py] = localXY(e);
+        hit = hitTest(px, py);
+      } else {
+        // DOM layer sits on top at scale 1. A hovered DOM star still lights
+        // its canvas edges (same star, same data) but keeps its own CSS
+        // tooltip — the canvas tip stays hidden to avoid doubles. Other UI
+        // (labels, palette, status) suppresses canvas hover entirely.
+        const dom = e.target.closest ? e.target.closest('.star-dom') : null;
+        if (dom && dom.dataset.i != null) { hit = +dom.dataset.i; domTip = true; }
+      }
+      if (hit !== hoverIdx) { hoverIdx = hit; kick(); }
+      if (hit >= 0 && !domTip) showTip(hit); else hideTip();
+      sky.style.cursor = e.target !== canvas ? '' : hit >= 0 ? 'pointer' : scale > 1 ? 'grab' : '';
+    }
+    if (canExplore) {
+      sky.addEventListener('wheel', (e) => {
+        e.preventDefault(); // over the sky, wheel = zoom (toward cursor), not page scroll
+        const [cx, cy] = localXY(e);
+        setScale(scale * Math.exp(-e.deltaY * 0.0015), cx, cy);
+        updateHover(e);
+      }, { passive: false });
+
+      sky.addEventListener('pointerdown', (e) => {
+        // Drags start on the canvas itself; DOM stars/labels/status/palette
+        // keep their native anchor + button behavior untouched.
+        if (e.pointerType === 'touch' || e.button !== 0 || e.target !== canvas) return;
+        dragging = true; dragMoved = false; pid = e.pointerId;
+        downX = e.clientX; downY = e.clientY; downPanX = panX; downPanY = panY;
+        canvas.setPointerCapture(pid);
+      });
+      sky.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch') return;
+        if (dragging && e.pointerId === pid) {
+          const mx = e.clientX - downX, my = e.clientY - downY;
+          if (!dragMoved && mx * mx + my * my > DRAG_T * DRAG_T) dragMoved = true;
+          if (dragMoved) {
+            panX = downPanX + mx; panY = downPanY + my;
+            clampPan();
+            if (hoverIdx !== -1) hoverIdx = -1;
+            hideTip();
+            sky.style.cursor = 'grabbing';
+            kick();
+            return;
+          }
+        }
+        updateHover(e);
+      });
+      sky.addEventListener('pointerup', (e) => {
+        if (dragging && e.pointerId === pid) {
+          dragging = false;
+          const wasDrag = dragMoved;
+          dragMoved = false;
+          if (!wasDrag) {
+            // Click (moved < 5px): open the star under the pointer.
+            const [px, py] = localXY(e);
+            const hit = hitTest(px, py);
+            if (hit >= 0) { location.href = `${BASE_URL}wiki/${fieldStars[hit].s}`; return; }
+          }
+        }
+        updateHover(e);
+      });
+      sky.addEventListener('pointercancel', () => { dragging = false; dragMoved = false; });
+      sky.addEventListener('pointerleave', () => {
+        if (dragging) return; // pointer capture keeps an active drag alive
+        if (hoverIdx !== -1) { hoverIdx = -1; kick(); }
+        hideTip();
+      });
+
+      sky.addEventListener('dblclick', (e) => {
+        if (scale > 1 && e.target === canvas) { e.preventDefault(); resetView(); }
+      });
+      resetChip.addEventListener('click', resetView);
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || scale === 1) return;
+        const paletteRoot = document.getElementById('palette-root');
+        if (paletteRoot && !paletteRoot.hidden) return; // palette's own Esc wins while open
+        resetView();
+      });
+
+      // Read-only view-state hook for browser verification (no UI surface).
+      window.__skyView = () => ({ scale, panX, panY, hoverIdx });
+    }
+
+    // "type to jump" means it (feedback round 1): on the homepage, any bare
+    // printable keypress opens the palette seeded with that character.
+    // '/' is excluded — it stays the palette's own open-empty shortcut
+    // (handled in Palette.astro); modifiers, IME composition, and typing
+    // into real inputs are left alone. This script registers before the
+    // palette's listener, which no-ops for printable keys once open.
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
+      if (e.key.length !== 1 || e.key === ' ' || e.key === '/') return;
+      const t = e.target;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      const paletteRoot = document.getElementById('palette-root');
+      if (!paletteRoot || !paletteRoot.hidden || !window.__paletteOpen) return;
+      e.preventDefault();
+      window.__paletteOpen(e.key);
+    });
+  </script>
 </Base>

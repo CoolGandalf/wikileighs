@@ -1,0 +1,40 @@
+---
+import { layoutLocalSky, labelAnchor, type SkyNeighbor } from '../lib/localsky';
+interface Props { neighbors: SkyNeighbor[] }
+const { neighbors } = Astro.props;
+const BASE_URL = import.meta.env.BASE_URL;
+const W = 700, H = 120;
+const sky = layoutLocalSky(neighbors, W, H);
+---
+{sky.nodes.length > 0 && (
+  <div class="local-sky">
+    <div class="local-sky-title">LINKED FROM — LOCAL SKY</div>
+    <svg viewBox={`0 0 ${W} ${H}`} aria-label="Pages linking here">
+      {sky.nodes.map(n => (
+        <line x1={sky.center.x} y1={sky.center.y} x2={n.x} y2={n.y}
+          stroke={n.journal ? 'var(--verdigris)' : 'var(--gold)'}
+          stroke-opacity={n.journal ? '0.3' : '0.25'} stroke-width="1" />
+      ))}
+      <circle cx={sky.center.x} cy={sky.center.y} r="4" fill="var(--gold)" />
+      {sky.nodes.map(n => {
+        const { anchor, dx } = labelAnchor(n.x, W);
+        const label = n.title.length > 28 ? n.title.slice(0, 27) + '…' : n.title;
+        return (
+          <a href={`${BASE_URL}wiki/${n.slug}`}>
+            <title>{n.title}</title>
+            <circle cx={n.x} cy={n.y} r="2.5" fill={n.journal ? 'var(--verdigris)' : 'var(--t-secondary)'} />
+            {/* Invisible hit target. r=14 (not 10): at mobile scale (~0.47x at
+                375px viewport) the rendered tap circle was ~9px in diameter;
+                14 brings it to ~13px and, with the label in the same <a>,
+                keeps neighbors tappable. Band spacing (>=50px between nodes)
+                means r=14 circles cannot overlap an adjacent node's target. */}
+            <circle cx={n.x} cy={n.y} r="14" fill="transparent" />
+            <text x={n.x + dx} y={n.y + 3} text-anchor={anchor}
+              fill={n.journal ? 'var(--verdigris)' : 'var(--t-secondary)'}
+              font-size="10" font-family="IBM Plex Mono, monospace">{label}</text>
+          </a>
+        );
+      })}
+    </svg>
+  </div>
+)}

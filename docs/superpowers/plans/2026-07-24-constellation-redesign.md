@@ -870,6 +870,22 @@ git add "src/pages/wiki/[slug].astro" src/components/StubBanner.astro src/styles
 git commit -m "feat(redesign): reading-room article page with dossier + local sky (Task 7)"
 ```
 
+**Greene parity verification record (2026-07-25).** Lesson pages compared:
+`wiki/greene-semester-w01-discover-your-calling` and
+`wiki/greene-semester-w13-the-cialdini-bridge` (the lesson with a real
+`<thead>`). Properties diffed against main: body link color (`#3366cc` /
+rgb(51,102,204)), visited (`#795cb2`), broken + broken:hover (`#ba0000`),
+and `th` background (`#f8f9fa` / rgb(248,249,250)); `.gl-nav a` confirmed
+still crimson (rgb(164,31,19)) via source-order tie-break, as on main.
+Method: three-worktree computed-style comparison vs main — target values
+sourced from main's tokens (`git show main:src/styles/global.css`),
+computed styles read on the built branch pages in a live browser, and the
+`.greene-lesson` HTML subtree byte-compared before/after (identical,
+21,139 bytes for w01). The parity rules live in `global.css` as the
+`.article-body:where(.greene-lesson)` block directly above the Greene
+design-system section; re-run the check by comparing those five computed
+values on built w01/W13 against this record.
+
 ---
 
 ### Task 8: Category + tag pages

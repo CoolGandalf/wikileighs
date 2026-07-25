@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getTodayPage, listTodayPageDates } from '../../lib/vault';
+import { newYorkDateLabel, newYorkWeekdayShort, getAdjacentTodayDates } from '../../lib/date';
 
 export function getStaticPaths() {
   return listTodayPageDates().map((date) => ({ params: { date } }));
@@ -13,20 +14,43 @@ const page = getTodayPage(parsed);
 const weekday = parsed.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
 const monthDay = parsed.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' });
 const headerDate = `${weekday}, ${monthDay}`;
+const navDateCaps = newYorkDateLabel(parsed).toUpperCase();
 const BASE_URL = import.meta.env.BASE_URL;
+
+// [date].astro had no prev/next navigation at all before this — built here
+// on listTodayPageDates() (same source the archive uses) rather than shifting
+// the calendar date by one, which would 404 straight into an un-generated
+// gap day (the today-cron has missed a handful of days).
+const { prev, next } = getAdjacentTodayDates(listTodayPageDates(), date as string);
+const prevLabel = prev ? newYorkWeekdayShort(prev).toLowerCase() : null;
+const nextLabel = next ? newYorkWeekdayShort(next).toLowerCase() : null;
 ---
 <Base title={`Today — ${date}`} description={`Daily snapshot for ${headerDate}.`}>
-  <div class="breadcrumb">
-    <a href={BASE_URL}>Main page</a> · <a href={`${BASE_URL}today`}>Today</a> · <a href={`${BASE_URL}today/archive`}>Archive</a> · {date}
-  </div>
+  <nav class="today-nav" aria-label="Daily snapshot navigation">
+    {prev && (
+      <>
+        <a href={`${BASE_URL}today/${prev}/`} title={prev}>← {prevLabel}</a>
+        {' · '}
+      </>
+    )}
+    <span class="now">{navDateCaps}</span>
+    {' · '}
+    {next ? (
+      <a href={`${BASE_URL}today/${next}/`} title={next}>{nextLabel} →</a>
+    ) : (
+      <span class="unwritten">tomorrow is unwritten →</span>
+    )}
+    {' · '}
+    <a href={`${BASE_URL}today/archive`}>archive</a>
+  </nav>
   {page ? (
     <article class="article-body">
       {page.photo && (
-        <figure class="today-hero">
+        <div class="today-wash">
           <img src={page.photo} alt={`Today's hero — ${date}`} loading="lazy" />
-        </figure>
+          <span class="wash-caption">{page.created || date}</span>
+        </div>
       )}
-      <p class="today-archive-link"><a href={`${BASE_URL}today/archive`}>↗ All daily snapshots</a></p>
       <Fragment set:html={page.html} />
     </article>
   ) : (

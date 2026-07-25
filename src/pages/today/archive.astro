@@ -1,99 +1,98 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { listTodayPageDates } from '../../lib/vault';
+import { listTodayPageDates, getTodayPhotoForDate } from '../../lib/vault';
+import { newYorkWeekdayIndex } from '../../lib/date';
 
-const dates = listTodayPageDates();
+const dates = listTodayPageDates(); // newest first
+const writtenDates = new Set(dates);
 
-interface MonthGroup {
-  monthKey: string;
-  monthLabel: string;
-  entries: Array<{ date: string; weekday: string; dayLabel: string }>;
+interface DayCell {
+  day: number;
+  date: string;
+  written: boolean;
+  illustrated: boolean;
+  photo: string | null;
 }
 
-const groups: MonthGroup[] = [];
-const monthIndex = new Map<string, MonthGroup>();
+interface MonthGroup {
+  monthKey: string; // YYYY-MM
+  monthLabel: string;
+  leadingBlanks: number; // 0 (Sun) – 6 (Sat), weekday of the 1st
+  days: DayCell[];
+}
 
-for (const date of dates) {
-  const parsed = new Date(`${date}T12:00:00-04:00`);
-  const monthKey = date.slice(0, 7);
-  const monthLabel = parsed.toLocaleDateString('en-US', {
+function daysInMonth(year: number, month1based: number): number {
+  // Day 0 of the *next* month is the last day of *this* month — plain
+  // numeric-args Date math, no date-string parsing/timezone involved.
+  return new Date(year, month1based, 0).getDate();
+}
+
+// Months present in listTodayPageDates(), newest first (dates is already
+// sorted that way, so the first time we see a month key is its rank).
+const monthKeys: string[] = [];
+for (const d of dates) {
+  const monthKey = d.slice(0, 7);
+  if (!monthKeys.includes(monthKey)) monthKeys.push(monthKey);
+}
+
+const groups: MonthGroup[] = monthKeys.map((monthKey) => {
+  const [yearStr, monthStr] = monthKey.split('-');
+  const year = Number(yearStr);
+  const month1based = Number(monthStr);
+  const monthLabel = new Date(`${monthKey}-01T12:00:00-04:00`).toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
     timeZone: 'America/New_York',
   });
-  const weekday = parsed.toLocaleDateString('en-US', {
-    weekday: 'long',
-    timeZone: 'America/New_York',
-  });
-  const dayLabel = parsed.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'America/New_York',
-  });
-  let group = monthIndex.get(monthKey);
-  if (!group) {
-    group = { monthKey, monthLabel, entries: [] };
-    monthIndex.set(monthKey, group);
-    groups.push(group);
+  const total = daysInMonth(year, month1based);
+  const days: DayCell[] = [];
+  for (let day = 1; day <= total; day++) {
+    const stamp = `${monthKey}-${String(day).padStart(2, '0')}`;
+    // Illustration lookup runs for every day in the month, not just written
+    // ones — a photo can exist for a date whose today-page never generated.
+    const photo = getTodayPhotoForDate(stamp);
+    days.push({ day, date: stamp, written: writtenDates.has(stamp), illustrated: !!photo, photo });
   }
-  group.entries.push({ date, weekday, dayLabel });
-}
+  return {
+    monthKey,
+    monthLabel,
+    leadingBlanks: newYorkWeekdayIndex(`${monthKey}-01`),
+    days,
+  };
+});
 
 const BASE_URL = import.meta.env.BASE_URL;
 ---
 <Base title="Today — Archive" description="All daily snapshots, newest first.">
-  <div class="breadcrumb">
-    <a href={BASE_URL}>Main page</a> · <a href={`${BASE_URL}today`}>Today</a> · Archive
-  </div>
   <article class="article-body">
     <h1>Daily snapshots — archive</h1>
     {dates.length === 0 ? (
       <p style="color: var(--color-muted);"><em>No daily snapshots have been generated yet.</em></p>
     ) : (
-      <>
-        <p style="color: var(--color-muted);">
-          {dates.length} {dates.length === 1 ? 'snapshot' : 'snapshots'}, newest first.
-        </p>
-        {groups.map(group => (
-          <section class="archive-month">
-            <h2>{group.monthLabel}</h2>
-            <ul class="archive-list">
-              {group.entries.map(e => (
-                <li>
-                  <a href={`${BASE_URL}today/${e.date}/`}>{e.weekday}, {e.dayLabel}</a>
-                  <span class="archive-stamp">{e.date}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </>
+      <p style="color: var(--color-muted);">
+        {dates.length} {dates.length === 1 ? 'snapshot' : 'snapshots'}, newest first.
+      </p>
     )}
   </article>
+  {groups.map((group) => (
+    <>
+      <div class="cal-month-title">{group.monthLabel}</div>
+      <div class="cal">
+        {Array.from({ length: group.leadingBlanks }).map(() => (
+          <div aria-hidden="true"></div>
+        ))}
+        {group.days.map((cell) => {
+          const classes = ['cal-day'];
+          if (cell.written) classes.push('written');
+          if (cell.illustrated) classes.push('illustrated');
+          const style = cell.photo ? `background-image: url('${cell.photo}')` : undefined;
+          return cell.written ? (
+            <a href={`${BASE_URL}today/${cell.date}/`} class={classes.join(' ')} style={style} title={cell.date}>{cell.day}</a>
+          ) : (
+            <span class={classes.join(' ')} style={style} title={cell.date}>{cell.day}</span>
+          );
+        })}
+      </div>
+    </>
+  ))}
 </Base>
-
-<style is:global>
-  .archive-month + .archive-month {
-    margin-top: 1.25rem;
-  }
-  .archive-list {
-    list-style: none;
-    padding: 0;
-    margin: 0.5rem 0 0;
-  }
-  .archive-list li {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 0.25rem 0;
-    border-bottom: 1px dotted var(--color-border-light);
-  }
-  .archive-list li:last-child {
-    border-bottom: none;
-  }
-  .archive-stamp {
-    font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 0.85em;
-    color: var(--color-muted);
-  }
-</style>

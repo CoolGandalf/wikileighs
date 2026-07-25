@@ -834,6 +834,22 @@ export function getDailyNote(date: Date): Article | null {
   return loadStandaloneMdFile(abs, `journal/daily/${stamp}.md`);
 }
 
+const TODAY_PHOTO_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.svg'];
+
+/**
+ * Resolve the today-photos hero image for a given YYYY-MM-DD stamp, if one
+ * exists at attachments/today-photos/<stamp>.<ext>. Factored out of
+ * getTodayPage() so the archive calendar's "illustrated day" thumbnails
+ * resolve photos with the exact same rule as the per-page hero.
+ */
+export function getTodayPhotoForDate(stamp: string): string | null {
+  for (const ext of TODAY_PHOTO_EXTENSIONS) {
+    const resolved = resolvePhoto(`today-photos/${stamp}${ext}`);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
 export function getTodayPage(date: Date): Article | null {
   const stamp = formatYMDDashed(date);
   const abs = path.join(VAULT_ROOT!, 'journal', 'today', `${stamp}.md`);
@@ -843,13 +859,7 @@ export function getTodayPage(date: Date): Article | null {
     // Convention: a photo at attachments/today-photos/<YYYY-MM-DD>.<ext>
     // becomes the hero. Survives cron regeneration of the markdown without
     // requiring photo: frontmatter (which the today-page generator overwrites).
-    for (const ext of ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.svg']) {
-      const resolved = resolvePhoto(`today-photos/${stamp}${ext}`);
-      if (resolved) {
-        article.photo = resolved;
-        break;
-      }
-    }
+    article.photo = getTodayPhotoForDate(stamp);
   }
   return article;
 }

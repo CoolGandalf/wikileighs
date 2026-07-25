@@ -1,0 +1,221 @@
+---
+import { getSearchIndex, getTypeCounts, getStubs, loadAllArticles } from '../lib/vault';
+// The full search index is fetched client-side (see search-index.json.ts) so it
+// isn't inlined into every page once this component is mounted site-wide — only
+// its length (for the placeholder copy) is needed at build time.
+const searchIndex = getSearchIndex();
+const searchIndexCount = searchIndex.length;
+const typeCounts = getTypeCounts();
+const stubCount = getStubs(10_000).length;
+const BASE_URL = import.meta.env.BASE_URL;
+
+// Pinned articles are resolved by title against the live vault at build time
+// (the lookup the old left rail used) rather than hardcoded slugs, so a future
+// rename/retitle of one of these pages degrades gracefully (entry just drops)
+// instead of silently 404ing.
+const PINNED_ARTICLE_TITLES = [
+  'Reading List',
+  'TODO',
+  'Project Status Dashboard',
+  'Trends Index',
+  'Bookshelf',
+];
+
+function normalizeTitle(t: string): string {
+  return t.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+const allArticles = loadAllArticles();
+const articlesByTitle = new Map<string, (typeof allArticles)[0]>();
+for (const a of allArticles) {
+  articlesByTitle.set(normalizeTitle(a.title), a);
+  const slugKey = normalizeTitle(a.slug.replace(/-/g, ' '));
+  if (!articlesByTitle.has(slugKey)) articlesByTitle.set(slugKey, a);
+}
+
+const PINNED = PINNED_ARTICLE_TITLES
+  .map((title) => articlesByTitle.get(normalizeTitle(title)))
+  .filter((a): a is NonNullable<typeof a> => a != null)
+  .map((a) => ({ label: a.title, slug: a.slug }));
+---
+<div id="palette-root" class="palette-root" hidden>
+  <div class="palette-scrim" data-palette-close></div>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Search WikiLeighs">
+    <div class="palette-input-row">
+      <span class="palette-caret" aria-hidden="true"></span>
+      <input id="palette-input" type="text" autocomplete="off" spellcheck="false"
+        placeholder={`search ${searchIndexCount} pages — or jump below`} aria-label="Search" />
+      <button class="palette-esc" data-palette-close aria-label="Close">esc</button>
+    </div>
+    <div id="palette-results" class="palette-results" role="listbox" hidden></div>
+    <div id="palette-empty" class="palette-empty">
+      <div class="palette-col">
+        <div class="palette-col-title">Pinned</div>
+        {PINNED.map(p => <a href={`${BASE_URL}wiki/${p.slug}`}>{p.label}</a>)}
+      </div>
+      <div class="palette-col">
+        <div class="palette-col-title">Categories</div>
+        {typeCounts.map(tc => (
+          <a href={`${BASE_URL}category/${tc.type}`}>{tc.type} <span class="count">{tc.count}</span></a>
+        ))}
+      </div>
+      <div class="palette-col">
+        <div class="palette-col-title">Go</div>
+        <a class="verdigris" href={`${BASE_URL}today`}>today</a>
+        <a href={`${BASE_URL}random`}>random article</a>
+        <a href={`${BASE_URL}gaps`}>gaps <span class="count gold">{stubCount} stubs</span></a>
+        <a href={`${BASE_URL}about`}>about</a>
+        <a href={`${BASE_URL}project-field/`}>foundation</a>
+      </div>
+    </div>
+    <div class="palette-hint">↑↓ navigate · enter open · esc close</div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ searchIndexCount, BASE_URL }}>
+  (() => {
+    const root = document.getElementById('palette-root');
+    const input = document.getElementById('palette-input');
+    const resultsEl = document.getElementById('palette-results');
+    const emptyEl = document.getElementById('palette-empty');
+    const hintEl = root.querySelector('.palette-hint');
+    let matches = []; let activeIdx = -1;
+    let lastFocused = null;
+
+    // Search index is fetched lazily on first open — avoids inlining ~400KB+ of
+    // JSON into every page once this component is mounted site-wide (see
+    // src/pages/search-index.json.ts). Cached across opens once loaded.
+    let searchIndex = null;
+    let indexFailed = false;
+    let indexPromise = null;
+    let showLoadingHint = false;
+
+    const loadIndex = () => indexPromise ??= fetch(`${BASE_URL}search-index.json`)
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then((data) => { searchIndex = data; return data; })
+      .catch((err) => {
+        indexFailed = true;
+        if (hintEl) hintEl.textContent = 'index unavailable — reload';
+        throw err;
+      });
+
+    // Static site routes, merged into matching client-side (feedback round 1:
+    // Foundation & friends weren't findable by typing). Constants only — the
+    // JSON article index is untouched. Scored by the same scorer via
+    // title/aliases; `url` (vs slug) routes the row and Enter straight there.
+    const ROUTES = [
+      { title: 'Foundation', url: `${BASE_URL}project-field/`, type: 'route', aliases: ['project field'] },
+      { title: 'Today', url: `${BASE_URL}today`, type: 'route', aliases: [] },
+      { title: 'Today Archive', url: `${BASE_URL}today/archive`, type: 'route', aliases: ['archive'] },
+      { title: 'Gaps', url: `${BASE_URL}gaps`, type: 'route', aliases: ['stubs', 'orphans'] },
+      { title: 'About', url: `${BASE_URL}about`, type: 'route', aliases: [] },
+      { title: 'Random', url: `${BASE_URL}random`, type: 'route', aliases: ['random article'] },
+    ];
+    const hrefFor = (m) => m.url || `${BASE_URL}wiki/${m.slug}`;
+
+    const norm = (s) => (s || '').toLowerCase();
+    function score(q, item) {
+      const n = norm(item.title); const ali = (item.aliases || []).map(norm);
+      if (n === q) return 1000;
+      if (ali.includes(q)) return 900;
+      if (n.startsWith(q)) return 500 - n.length;
+      if (ali.some((a) => a.startsWith(q))) return 450 - item.title.length;
+      if (n.includes(q)) return 200 - n.length;
+      if ((item.tags || []).some((t) => norm(t).includes(q))) return 120;
+      if (norm(item.excerpt).includes(q)) return 80;
+      return 0;
+    }
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function render() {
+      const q = input.value.trim();
+      const has = q !== '';
+      resultsEl.hidden = !has; emptyEl.hidden = has;
+      if (!has) { resultsEl.innerHTML = ''; return; }
+
+      // Route matches render even while the article index is loading (or
+      // after it failed) — they're client-side constants.
+      if (!matches.length) {
+        if (indexFailed) {
+          resultsEl.innerHTML = `<div class="palette-status">index unavailable — reload</div>`;
+        } else if (!searchIndex) {
+          resultsEl.innerHTML = showLoadingHint ? `<div class="palette-status">loading index…</div>` : '';
+        } else {
+          resultsEl.innerHTML = `<div class="palette-status">no matches</div>`;
+        }
+        return;
+      }
+      resultsEl.innerHTML = matches.map((m, i) => `
+        <a role="option" aria-selected="${i === activeIdx}" class="${i === activeIdx ? 'active' : ''}" href="${esc(hrefFor(m))}">
+          <span class="r-title">${esc(m.title)}</span>
+          <span class="r-meta">${esc(m.type)}${m.excerpt ? ' · ' + esc(m.excerpt.slice(0, 60)) : ''}</span>
+        </a>`).join('');
+    }
+    function update() {
+      const q = norm(input.value.trim());
+      if (!q) { matches = []; activeIdx = -1; render(); return; }
+      const pool = searchIndex ? ROUTES.concat(searchIndex) : ROUTES;
+      matches = pool.map((it) => ({ it, s: score(q, it) }))
+        .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 10).map((x) => x.it);
+      activeIdx = matches.length ? 0 : -1; render();
+    }
+    // Optional `seed` (feedback round 1, "type to jump" should mean it):
+    // the homepage forwards the first typed character so the palette opens
+    // already containing it, with live results once the index is in.
+    function open(seed) {
+      lastFocused = document.activeElement;
+      root.hidden = false; input.value = seed || ''; matches = []; activeIdx = -1; showLoadingHint = false;
+      if (input.value.trim() !== '') update(); else render();
+      requestAnimationFrame(() => {
+        input.focus();
+        const n = input.value.length;
+        if (n) input.setSelectionRange(n, n); // caret after the seeded char
+      });
+
+      if (!searchIndex && !indexFailed) {
+        const timer = setTimeout(() => {
+          showLoadingHint = true;
+          if (input.value.trim() !== '') render();
+        }, 150);
+        loadIndex().then(() => {
+          clearTimeout(timer);
+          if (input.value.trim() !== '') update();
+        }).catch(() => {
+          clearTimeout(timer);
+          if (input.value.trim() !== '') render();
+        });
+      }
+    }
+    function close() {
+      root.hidden = true;
+      if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
+    }
+    window.__paletteOpen = open;
+
+    document.addEventListener('keydown', (e) => {
+      if (e.isComposing) return;
+      const mod = navigator.platform.startsWith('Mac') ? e.metaKey : e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'k') {
+        if (e.repeat) return;
+        e.preventDefault(); root.hidden ? open() : close(); return;
+      }
+      if (e.key === '/' && root.hidden && !/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName || '')) { e.preventDefault(); open(); return; }
+      if (root.hidden) return;
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') {
+        const dialog = root.querySelector('.palette');
+        const focusables = Array.from(dialog.querySelectorAll('a[href], button, input')).filter((el) => el.offsetParent !== null);
+        if (!focusables.length) return;
+        const first = focusables[0], last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        return;
+      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, matches.length - 1); render(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); }
+      if (e.key === 'Enter' && activeIdx >= 0 && matches[activeIdx]) { window.location.href = hrefFor(matches[activeIdx]); }
+    });
+    input?.addEventListener('input', update);
+    root.querySelectorAll('[data-palette-close]').forEach((el) => el.addEventListener('click', close));
+  })();
+</script>
