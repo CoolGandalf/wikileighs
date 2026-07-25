@@ -12,8 +12,11 @@ const zone = 'America/New_York';
 const stamp = new Date().toLocaleDateString('en-CA', { timeZone: zone });
 
 const html = fs.readFileSync(path.resolve('dist/index.html'), 'utf8');
-const hasCheck = html.includes('today ✓');
-const hasDash = html.includes('today —');
+// Match the status-line element's text node (">today ✓<"), not the bare
+// substring — a glow-star aria-label that happens to contain "today ✓"
+// must not be able to satisfy the probe.
+const hasCheck = html.includes('>today ✓<');
+const hasDash = html.includes('>today —<');
 if (!hasCheck && !hasDash) {
   throw new Error('Homepage is missing the "today ✓/—" status flag');
 }

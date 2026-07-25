@@ -22,10 +22,13 @@ const fieldStars = articles.map(a => {
 const glowing = articles.filter(a => isRecent(a.updated))
   .sort((a, b) => (b.updated || '').localeCompare(a.updated || '')).slice(0, 40)
   .map(a => { const p = starPosition(a.slug, a.type); return { slug: a.slug, title: a.title, x: p.x, y: p.y, journal: a.type === 'journal' || a.type === 'voice-memo' }; });
-// Types without their own cluster all map to the misc center; stacked labels
-// there would overprint each other (and the palette slot, which sits over the
-// misc above-spot). Shared-center labels render as fixed-pixel rows inside the
-// lower half of their ellipse — px pitch so rows never collide at any height.
+// Label geometry, correct by construction:
+// - x clamped to 8–92% AND to the label's own half-width in px, so long
+//   labels (VOICE-MEMO at x=8) stay fully on-canvas at any viewport width.
+// - a label whose above-cluster spot lands in the palette's vertical band
+//   (28–42%) flips below its cluster instead of hiding under the button.
+// - types without their own cluster share the misc center; those labels
+//   render as fixed-pixel stacked rows (same band check on the stack base).
 const centerCounts = new Map<string, number>();
 const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
   const c = clusterCenter(tc.type);
@@ -33,20 +36,35 @@ const clusterLabels = typeCounts.filter(tc => tc.count >= 10).map(tc => {
   const stack = centerCounts.get(key) ?? 0;
   centerCounts.set(key, stack + 1);
   return { ...tc, c, key, stack };
-}).map(l => ({
-  ...l,
-  topStyle: (centerCounts.get(l.key) ?? 1) > 1
-    ? `calc(${l.c.y + 2}% + ${l.stack * 17}px)`
-    : `${Math.max(2, l.c.y - l.c.ry - 4)}%`,
-}));
+}).map(l => {
+  const text = `${l.type.toUpperCase()} · ${l.count}`;
+  const halfW = Math.ceil((text.length * 8.3) / 2); // 10px mono + 0.22em tracking ≈ 8.3px/char
+  const lx = Math.min(92, Math.max(8, l.c.x));
+  let lt = Math.max(2, l.c.y - l.c.ry - 4);
+  if (lt >= 28 && lt <= 42) lt = l.c.y + l.c.ry + 2; // palette band → below cluster
+  let stackBase = l.c.y + 2; // shared-center rows: base inside the ellipse's lower half
+  if (stackBase >= 28 && stackBase <= 42) stackBase = l.c.y + l.c.ry + 2;
+  const shared = (centerCounts.get(l.key) ?? 1) > 1;
+  return {
+    ...l, text, shared,
+    leftStyle: `clamp(${halfW}px, ${lx}%, calc(100% - ${halfW}px))`,
+    // Shared-center rows stack UPWARD from the base into the gap under the
+    // palette (safe for sky widths ≳590px). Below the 640px breakpoint the
+    // .stacked mobile override in global.css moves the column to the empty
+    // band above the palette instead — labels' px widths don't scale with
+    // the viewport, so the two regimes need different homes.
+    topStyle: shared ? `calc(${stackBase}% - ${l.stack * 17}px)` : `${lt}%`,
+  };
+});
 const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/New_York' });
 ---
 <Base title="Home">
   <div class="sky" id="sky">
     <canvas id="sky-canvas" aria-hidden="true"></canvas>
     {clusterLabels.map(l => (
-      <a class="cluster-label" style={`left:${l.c.x}%;top:${l.topStyle}`}
-         href={`${BASE_URL}category/${l.type}`}>{l.type.toUpperCase()} · {l.count}</a>
+      <a class={`cluster-label${l.shared ? ' stacked' : ''}`}
+         style={`left:${l.leftStyle};top:${l.topStyle};--row:${l.stack}`}
+         href={`${BASE_URL}category/${l.type}`}>{l.text}</a>
     ))}
     {glowing.map(s => (
       <a class={`star-dom ${s.journal ? 'verd' : ''}`} style={`left:${s.x}%;top:${s.y}%`}
@@ -70,10 +88,11 @@ const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minu
     const canvas = document.getElementById('sky-canvas');
     const sky = document.getElementById('sky');
     const ctx = canvas.getContext('2d');
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+    let reduced = motionQuery.matches;
     const isMobile = matchMedia('(max-width: 640px)').matches;
     const field = isMobile ? fieldStars.filter((_, i) => i % 5 === 0) : fieldStars; // sampled sky on mobile
-    let W, H;
+    let W, H, rafId = 0, frame = 0;
     const t0 = performance.now();
     function size() { W = canvas.width = sky.clientWidth * devicePixelRatio; H = canvas.height = sky.clientHeight * devicePixelRatio; }
     function draw(now) {
@@ -81,16 +100,23 @@ const buildTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minu
       const t = (now - t0) / 1000;
       for (let i = 0; i < field.length; i++) {
         const s = field[i];
-        const dx = reduced ? 0 : Math.sin(t / 60 + i) * 0.15; // slow drift, spec §2
+        const dx = reduced ? 0 : Math.sin((2 * Math.PI * t) / 60 + i) * 0.35; // true ~60s drift period, spec §2
+        const tw = reduced ? 0 : Math.sin(t / (3 + (i % 5)) + i * 1.7) * 0.1; // per-star twinkle
         const x = ((s.x + dx) / 100) * W, y = (s.y / 100) * H;
         ctx.beginPath();
-        ctx.fillStyle = s.r ? 'rgba(232,198,106,.9)' : s.j ? 'rgba(111,211,199,.6)' : `rgba(255,255,255,${0.18 + ((i * 37) % 20) / 100})`;
+        ctx.fillStyle = s.r ? 'rgba(232,198,106,.9)' : s.j ? 'rgba(111,211,199,.6)' : `rgba(255,255,255,${0.18 + ((i * 37) % 20) / 100 + tw})`;
         ctx.arc(x, y, (s.r ? 1.6 : 1) * devicePixelRatio, 0, Math.PI * 2);
         ctx.fill();
       }
-      if (!reduced) requestAnimationFrame(draw);
     }
-    size(); addEventListener('resize', () => { size(); if (reduced) draw(t0); });
-    reduced ? draw(t0) : requestAnimationFrame(draw);
+    function loop(now) { frame++; if (frame % 2) draw(now); rafId = requestAnimationFrame(loop); } // ~30fps: draw every other tick
+    function start() {
+      cancelAnimationFrame(rafId);
+      if (reduced) draw(performance.now());
+      else rafId = requestAnimationFrame(loop);
+    }
+    motionQuery.addEventListener('change', () => { reduced = motionQuery.matches; start(); });
+    size(); addEventListener('resize', () => { size(); if (reduced) draw(performance.now()); });
+    start();
   </script>
 </Base>
