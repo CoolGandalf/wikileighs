@@ -18,6 +18,7 @@ test('starPosition stays inside its cluster box', () => {
 test('unknown types fall into the misc cluster, never crash', () => {
   const p = starPosition('weird', 'no-such-type');
   assert.ok(p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100);
+  assert.deepEqual(clusterCenter('no-such-type'), clusterCenter('misc'));
 });
 
 test('isRecent: 7-day window on YYYY-MM-DD frontmatter dates', () => {
@@ -27,4 +28,6 @@ test('isRecent: 7-day window on YYYY-MM-DD frontmatter dates', () => {
   assert.equal(isRecent('2026-07-16', now), false);
   assert.equal(isRecent(undefined, now), false);
   assert.equal(isRecent('garbage', now), false);
+  assert.equal(isRecent('2026-07-17', now), false);
+  assert.equal(isRecent('2026-07-25', now), true);
 });

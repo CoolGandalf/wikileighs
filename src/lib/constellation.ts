@@ -20,10 +20,12 @@ export function clusterCenter(type: string): Cluster {
   return CLUSTERS[type] ?? CLUSTERS.misc;
 }
 
-// FNV-1a — tiny, deterministic, good spread. Not crypto; doesn't need to be.
+// Walk the string back-to-front: the varying tail of near-duplicate slugs
+// (e.g. daily YYYY-MM-DD notes) then passes through more multiply rounds
+// instead of just the last one, which starves forward iteration.
 function fnv1a(s: string): number {
   let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
+  for (let i = s.length - 1; i >= 0; i--) {
     h ^= s.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
@@ -44,8 +46,9 @@ export function starPosition(slug: string, type: string): { x: number; y: number
 
 const DAY_MS = 86_400_000;
 
-export function isRecent(updated: string | undefined, now: Date = new Date()): boolean {
+export function isRecent(updated: string | null | undefined, now: Date = new Date()): boolean {
   if (!updated || !/^\d{4}-\d{2}-\d{2}/.test(updated)) return false;
+  // Fixed EDT offset is an intentional simplification: the ±1-day buffers make the winter DST hour unobservable. See date.ts for true NY-local conversions.
   const t = new Date(`${updated.slice(0, 10)}T12:00:00-04:00`).getTime();
   if (Number.isNaN(t)) return false;
   const age = now.getTime() - t;
