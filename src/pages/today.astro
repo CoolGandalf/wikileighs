@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
-import { newYorkDateLabel, newYorkDateStamp, newYorkWeekdayShort } from '../lib/date';
-import { getTodayPage, getAdjacentTodayDates } from '../lib/vault';
+import { newYorkDateLabel, newYorkDateStamp, newYorkWeekdayShort, getAdjacentTodayDates } from '../lib/date';
+import { getTodayPage, listTodayPageDates } from '../lib/vault';
 
 const today = new Date();
 const todayPage = getTodayPage(today);
@@ -13,7 +13,7 @@ const BASE_URL = import.meta.env.BASE_URL;
 // today is always the most recent day by definition, so there is never a
 // next-page date here — only prev, sourced from the same listTodayPageDates()
 // the archive uses (skips gap days automatically).
-const { prev } = getAdjacentTodayDates(todayStamp);
+const { prev } = getAdjacentTodayDates(listTodayPageDates(), todayStamp);
 const prevLabel = prev ? newYorkWeekdayShort(prev).toLowerCase() : null;
 ---
 <Base title="Today" description={`Daily snapshot for ${headerDate}.`}>

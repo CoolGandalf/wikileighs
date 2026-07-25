@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { getTodayPage, listTodayPageDates, getAdjacentTodayDates } from '../../lib/vault';
-import { newYorkDateLabel, newYorkWeekdayShort } from '../../lib/date';
+import { getTodayPage, listTodayPageDates } from '../../lib/vault';
+import { newYorkDateLabel, newYorkWeekdayShort, getAdjacentTodayDates } from '../../lib/date';
 
 export function getStaticPaths() {
   return listTodayPageDates().map((date) => ({ params: { date } }));
@@ -21,7 +21,7 @@ const BASE_URL = import.meta.env.BASE_URL;
 // on listTodayPageDates() (same source the archive uses) rather than shifting
 // the calendar date by one, which would 404 straight into an un-generated
 // gap day (the today-cron has missed a handful of days).
-const { prev, next } = getAdjacentTodayDates(date as string);
+const { prev, next } = getAdjacentTodayDates(listTodayPageDates(), date as string);
 const prevLabel = prev ? newYorkWeekdayShort(prev).toLowerCase() : null;
 const nextLabel = next ? newYorkWeekdayShort(next).toLowerCase() : null;
 ---

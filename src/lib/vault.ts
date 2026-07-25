@@ -875,25 +875,6 @@ export function listTodayPageDates(): string[] {
     .reverse();
 }
 
-/**
- * Nearest today-page dates before/after a given YYYY-MM-DD stamp, skipping
- * gap days that never got a page (the today-cron has missed a handful).
- * Backs the prev/next nav ribbon on /today and /today/[date]; neither page
- * had real prev/next logic before this, so this is new plumbing built
- * directly on the existing listTodayPageDates() rather than re-deriving
- * dates by calendar arithmetic (which would 404 into un-generated gap days).
- */
-export function getAdjacentTodayDates(stamp: string): { prev: string | null; next: string | null } {
-  const ascending = [...listTodayPageDates()].reverse(); // oldest -> newest
-  let prev: string | null = null;
-  let next: string | null = null;
-  for (const d of ascending) {
-    if (d < stamp) prev = d;
-    else if (d > stamp && next === null) next = d;
-  }
-  return { prev, next };
-}
-
 export function getVoiceMemosForDate(date: Date): Article[] {
   const stamp = formatYMDDashed(date);
   const dir = path.join(VAULT_ROOT!, 'journal', 'personal');

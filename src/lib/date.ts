@@ -51,3 +51,28 @@ export function newYorkWeekdayShort(stamp: string): string {
 export function newYorkWeekdayIndex(stamp: string): number {
   return WEEKDAY_SHORT_NAMES.indexOf(newYorkWeekdayShort(stamp));
 }
+
+/**
+ * Nearest dates before/after a given YYYY-MM-DD stamp within an arbitrary
+ * list, skipping gaps (a date that isn't in `dates` — the today-cron has
+ * missed a handful of days) rather than assuming ±1 calendar day, which
+ * would 404 into an un-generated page. Pure — takes `dates` as a parameter
+ * instead of reading listTodayPageDates() itself, so this module stays
+ * vault-independent; input order doesn't matter, it just scans for the max
+ * date below stamp and the min date above it. Contract: `prev`/`next` are
+ * null when stamp is at or beyond the open end of the list (e.g. `next` is
+ * always null for the most recent date, since nothing later exists yet).
+ * Backs the prev/next nav ribbon on /today and /today/[date].
+ */
+export function getAdjacentTodayDates(dates: string[], stamp: string): { prev: string | null; next: string | null } {
+  let prev: string | null = null;
+  let next: string | null = null;
+  for (const d of dates) {
+    if (d < stamp) {
+      if (prev === null || d > prev) prev = d;
+    } else if (d > stamp) {
+      if (next === null || d < next) next = d;
+    }
+  }
+  return { prev, next };
+}
