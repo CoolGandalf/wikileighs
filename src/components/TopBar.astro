@@ -5,13 +5,13 @@ const { crumb } = Astro.props;
 ---
 <header class="topbar">
   <a href={BASE_URL} class="topbar-brand">wikileighs{crumb && <span class="crumb">/<span>{crumb}</span></span>}</a>
-  <div class="topbar-actions">
-    <button class="search-chip" onclick="window.__paletteOpen && window.__paletteOpen()">
+  <nav class="topbar-actions" aria-label="Site">
+    <button type="button" class="search-chip" onclick="window.__paletteOpen && window.__paletteOpen()">
       <span data-key-hint>⌘K</span> search
     </button>
     <a class="verdigris" href={`${BASE_URL}today`}>today</a>
     <a href={`${BASE_URL}random`}>random</a>
-  </div>
+  </nav>
 </header>
 <script is:inline>
   if (!navigator.platform.startsWith('Mac'))

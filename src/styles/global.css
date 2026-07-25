@@ -833,3 +833,4 @@ body {
   border-top: 1px solid var(--gold-hairline); color: var(--t-muted);
   font-family: var(--font-mono); font-size: 11px; }
 .page-footer a { color: var(--t-muted); }
+.footer-pinned { margin-top: 4px; opacity: .8; }

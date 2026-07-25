@@ -28,8 +28,10 @@ const BASE_URL = import.meta.env.BASE_URL;
       <slot />
     </main>
     <footer class="page-footer">
-      WikiLeighs · rendered from <code>notes/</code> ·
-      <a href={`${BASE_URL}about`}>about</a> · <a href={`${BASE_URL}random`}>random</a> · <a href={`${BASE_URL}gaps`}>gaps</a>
+      <div>WikiLeighs · rendered from <code>notes/</code> · <a href={`${BASE_URL}about`}>about</a> · <a href={`${BASE_URL}random`}>random</a> · <a href={`${BASE_URL}gaps`}>gaps</a></div>
+      <div class="footer-pinned">
+        <a href={`${BASE_URL}wiki/reading-list`}>reading list</a> · <a href={`${BASE_URL}wiki/todo`}>todo</a> · <a href={`${BASE_URL}wiki/project-status-dashboard`}>dashboard</a> · <a href={`${BASE_URL}wiki/trends-index`}>trends</a> · <a href={`${BASE_URL}wiki/bookshelf`}>bookshelf</a> · <a href={`${BASE_URL}project-field/`}>foundation</a>
+      </div>
     </footer>
     <Palette />
   </body>
