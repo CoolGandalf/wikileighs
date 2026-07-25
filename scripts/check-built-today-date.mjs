@@ -18,19 +18,24 @@ if (!hasCheck && !hasDash) {
   throw new Error('Homepage is missing the "today ✓/—" status flag');
 }
 
+// Fail closed: every legitimate invocation (local + deploy.yml) sets
+// VAULT_ROOT. Without it the drift check cannot run, and a presence-only
+// pass would be a silent exit-0 degrade.
 const vaultRoot = process.env.VAULT_ROOT;
-if (vaultRoot) {
-  const todayFileExists = fs.existsSync(path.join(vaultRoot, 'journal', 'today', `${stamp}.md`));
-  if (todayFileExists && !hasCheck) {
-    throw new Error(`Homepage shows "today —" but journal/today/${stamp}.md exists — NY date drift?`);
-  }
-  if (!todayFileExists && !hasDash) {
-    throw new Error(`Homepage shows "today ✓" but journal/today/${stamp}.md does not exist — NY date drift?`);
-  }
-  if (todayFileExists) {
-    const archive = path.resolve('dist', 'today', stamp, 'index.html');
-    if (!fs.existsSync(archive)) throw new Error(`Current-day archive was not built: ${archive}`);
-  }
+const todayDir = vaultRoot ? path.join(vaultRoot, 'journal', 'today') : null;
+if (!todayDir || !fs.existsSync(todayDir)) {
+  throw new Error('VAULT_ROOT not set/invalid — today-drift check cannot run; refusing to pass silently');
+}
+const todayFileExists = fs.existsSync(path.join(todayDir, `${stamp}.md`));
+if (todayFileExists && !hasCheck) {
+  throw new Error(`Homepage shows "today —" but journal/today/${stamp}.md exists — NY date drift?`);
+}
+if (!todayFileExists && !hasDash) {
+  throw new Error(`Homepage shows "today ✓" but journal/today/${stamp}.md does not exist — NY date drift?`);
+}
+if (todayFileExists) {
+  const archive = path.resolve('dist', 'today', stamp, 'index.html');
+  if (!fs.existsSync(archive)) throw new Error(`Current-day archive was not built: ${archive}`);
 }
 
 console.log(`Today flag check passed: ${hasCheck ? '✓' : '—'} for ${stamp}`);
