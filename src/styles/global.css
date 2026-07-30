@@ -407,6 +407,7 @@ body {
 .palette-col a:hover { color: var(--gold); }
 .palette-col .count { color: var(--t-muted); }
 .palette-col .count.gold { color: var(--gold); }
+.palette-col a.gold { color: var(--gold); }
 .palette-col a.verdigris { color: var(--verdigris); }
 .palette-hint { padding: 7px 16px; border-top: 1px solid var(--gold-hairline);
   color: var(--t-muted); font-size: 11px; font-family: var(--font-mono); }
@@ -421,6 +422,7 @@ body {
 .topbar-brand .crumb span { color: var(--t-muted); }
 .topbar-actions { display: flex; gap: 18px; align-items: center; font-family: var(--font-mono); font-size: 12px; }
 .topbar-actions a { color: var(--t-muted); text-decoration: none; }
+.topbar-actions a.gold { color: var(--gold); }
 .topbar-actions a.verdigris { color: var(--verdigris); }
 .search-chip { background: none; border: 1px solid var(--color-border-light); border-radius: 6px;
   color: var(--t-muted); font-family: var(--font-mono); font-size: 11px; padding: 4px 12px; cursor: pointer; }
@@ -606,6 +608,53 @@ body {
 .cal-day.illustrated::before { content: ''; position: absolute; inset: 0; background: rgba(11,14,20,.35); border-radius: 6px; }
 .cal-day:not(.written) { opacity: 0.35; pointer-events: none; }
 @media (max-width: 640px) { .idx-title { flex: 0 0 60%; } .idx-excerpt { display: none; } }
+
+/* ---- /now: build-time workbench ---- */
+.now-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+  padding: 20px 0 18px; border-bottom: 1px solid var(--gold-hairline); margin-bottom: 18px; }
+.now-kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: .22em; color: var(--gold); }
+.now-head h1 { font-family: var(--font-serif); font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 400;
+  line-height: 1; color: var(--t-heading); margin: 8px 0 4px; }
+.now-head p { color: var(--t-muted); margin: 0; }
+.now-today { flex: 0 0 240px; display: flex; flex-direction: column; padding: 12px 14px;
+  border: 1px solid var(--verdigris-soft); border-radius: 8px; background: rgba(111, 211, 199, .04); text-decoration: none; }
+.now-today span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--t-muted); }
+.now-today strong { color: var(--verdigris); font-weight: 500; margin-top: 3px; }
+.now-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.now-panel { min-width: 0; background: var(--raised); border: 1px solid var(--gold-hairline);
+  border-radius: 9px; padding: 14px 16px; }
+.now-panel.now-wide { grid-column: 1 / -1; }
+.now-panel h2 { font-family: var(--font-mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--gold); margin: 0 0 9px; }
+.now-panel h2 span { color: var(--t-muted); letter-spacing: .04em; }
+.now-list { display: flex; flex-direction: column; }
+.now-row { display: flex; justify-content: space-between; gap: 18px; align-items: baseline;
+  padding: 8px 0; border-top: 1px solid rgba(139, 147, 165, .12); text-decoration: none; }
+.now-row:first-child { border-top: 0; }
+.now-row-main { min-width: 0; display: flex; flex-direction: column; }
+.now-row strong { color: var(--t-heading); font-size: 13px; font-weight: 500; line-height: 1.35; }
+.now-row small { color: var(--t-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-row:hover strong, .now-row:focus-visible strong { color: var(--gold); }
+.now-date { color: var(--verdigris); font-size: 10px; white-space: nowrap; }
+.now-verified { color: var(--verdigris); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.now-empty { color: var(--t-muted); font-size: 12px; margin: 4px 0; }
+.now-resurface { position: relative; overflow: hidden;
+  background: radial-gradient(ellipse 80% 90% at 90% 10%, rgba(88, 118, 200, .13), transparent 65%), var(--raised); }
+.now-resurface > a { display: block; text-decoration: none; padding: 4px 2px 2px 26px; position: relative; }
+.now-resurface strong { color: var(--t-heading); font-family: var(--font-serif); font-size: 1.35rem; font-weight: 400; }
+.now-resurface p { color: var(--t-secondary); font-family: var(--font-serif); font-size: 15px; line-height: 1.5; margin: 5px 0 7px; }
+.now-resurface small { color: var(--t-muted); font-size: 10px; }
+.now-star { position: absolute; left: 2px; top: 13px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 12px 3px var(--gold-soft); }
+.now-footnote { color: var(--t-muted); font-size: 10px; margin: 14px 2px 0; }
+@media (max-width: 760px) {
+  .topbar-actions { gap: 10px; }
+  .now-head { align-items: stretch; flex-direction: column; }
+  .now-today { flex-basis: auto; }
+  .now-grid { grid-template-columns: 1fr; }
+  .now-panel.now-wide { grid-column: auto; }
+  .now-row small { white-space: normal; }
+}
 
 /* ---- Gaps: the unlit sky (spec §6) ---- */
 .unlit-title { font-family: var(--font-serif); font-size: 1.9rem; color: var(--t-heading); margin-bottom: 2px; }

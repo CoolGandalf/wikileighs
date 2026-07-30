@@ -61,6 +61,7 @@ const PINNED = PINNED_ARTICLE_TITLES
       </div>
       <div class="palette-col">
         <div class="palette-col-title">Go</div>
+        <a class="gold" href={`${BASE_URL}now`}>now</a>
         <a class="verdigris" href={`${BASE_URL}today`}>today</a>
         <a href={`${BASE_URL}random`}>random article</a>
         <a href={`${BASE_URL}gaps`}>gaps <span class="count gold">{stubCount} stubs</span></a>
@@ -105,6 +106,7 @@ const PINNED = PINNED_ARTICLE_TITLES
     // title/aliases; `url` (vs slug) routes the row and Enter straight there.
     const ROUTES = [
       { title: 'Foundation', url: `${BASE_URL}project-field/`, type: 'route', aliases: ['project field'] },
+      { title: 'Now', url: `${BASE_URL}now`, type: 'route', aliases: ['workbench', 'open loops', 'recent changes'] },
       { title: 'Today', url: `${BASE_URL}today`, type: 'route', aliases: [] },
       { title: 'Today Archive', url: `${BASE_URL}today/archive`, type: 'route', aliases: ['archive'] },
       { title: 'Gaps', url: `${BASE_URL}gaps`, type: 'route', aliases: ['stubs', 'orphans'] },

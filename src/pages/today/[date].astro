@@ -7,8 +7,8 @@ export function getStaticPaths() {
   return listTodayPageDates().map((date) => ({ params: { date } }));
 }
 
-const { date } = Astro.params;
-const parsed = new Date(`${date}T12:00:00-04:00`);
+const dateStamp = Astro.params.date as string;
+const parsed = new globalThis.Date(`${dateStamp}T12:00:00-04:00`);
 const page = getTodayPage(parsed);
 
 const weekday = parsed.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/New_York' });
@@ -21,11 +21,11 @@ const BASE_URL = import.meta.env.BASE_URL;
 // on listTodayPageDates() (same source the archive uses) rather than shifting
 // the calendar date by one, which would 404 straight into an un-generated
 // gap day (the today-cron has missed a handful of days).
-const { prev, next } = getAdjacentTodayDates(listTodayPageDates(), date as string);
+const { prev, next } = getAdjacentTodayDates(listTodayPageDates(), dateStamp);
 const prevLabel = prev ? newYorkWeekdayShort(prev).toLowerCase() : null;
 const nextLabel = next ? newYorkWeekdayShort(next).toLowerCase() : null;
 ---
-<Base title={`Today — ${date}`} description={`Daily snapshot for ${headerDate}.`}>
+<Base title={`Today — ${dateStamp}`} description={`Daily snapshot for ${headerDate}.`}>
   <nav class="today-nav" aria-label="Daily snapshot navigation">
     {prev && (
       <>
@@ -47,8 +47,8 @@ const nextLabel = next ? newYorkWeekdayShort(next).toLowerCase() : null;
     <article class="article-body">
       {page.photo && (
         <div class="today-wash">
-          <img src={page.photo} alt={`Today's hero — ${date}`} loading="lazy" />
-          <span class="wash-caption">{page.created || date}</span>
+          <img src={page.photo} alt={`Today's hero — ${dateStamp}`} loading="lazy" />
+          <span class="wash-caption">{page.created || dateStamp}</span>
         </div>
       )}
       <Fragment set:html={page.html} />

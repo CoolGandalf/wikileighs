@@ -7,8 +7,9 @@
     "dev": "astro dev --host 127.0.0.1 --port 4321",
     "test:date": "node --experimental-strip-types --test src/lib/date.test.ts",
     "test:constellation": "node --experimental-strip-types --test src/lib/constellation.test.ts src/lib/localsky.test.ts",
+    "test:now": "node --experimental-strip-types --test src/lib/now.test.ts",
     "build:project-field": "vite build --config project-field/vite.config.ts",
-    "build": "npm run test:date && npm run test:constellation && npm run build:project-field && astro build && node scripts/check-built-today-date.mjs",
+    "build": "npm run test:date && npm run test:constellation && npm run test:now && npm run build:project-field && astro build && node scripts/check-built-today-date.mjs",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
     "astro": "astro"
   },
@@ -33,5 +34,8 @@
     "typescript": "^5.7.3",
     "unist-util-visit": "^5.0.0",
     "vite": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2"
   }
 }

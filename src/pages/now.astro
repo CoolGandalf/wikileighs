@@ -1,0 +1,107 @@
+---
+import Base from '../layouts/Base.astro';
+import { newYorkDateLabel, newYorkDateStamp } from '../lib/date';
+import { loadAllArticles, getTodayPage } from '../lib/vault';
+import { buildNowData } from '../lib/now';
+
+const now = new Date();
+const stamp = newYorkDateStamp(now);
+const dateLabel = newYorkDateLabel(now);
+const data = buildNowData(loadAllArticles(), stamp);
+const todayPage = getTodayPage(now);
+const BASE_URL = import.meta.env.BASE_URL;
+
+function excerpt(value: string, max = 150): string {
+  const clean = value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
+function dateOf(article: { updated: string | null; created: string | null }): string {
+  return article.updated || article.created || 'undated';
+}
+---
+<Base title="Now" description={`What deserves attention on ${dateLabel}.`} activeType="now">
+  <section class="now-head">
+    <div>
+      <div class="now-kicker">THE WORKBENCH · {stamp}</div>
+      <h1>Now</h1>
+      <p>What changed, what is still open, and one useful thing to bring back.</p>
+    </div>
+    <a class="now-today" href={`${BASE_URL}today`}>
+      <span>{todayPage ? 'today is ready' : 'today is still compiling'}</span>
+      <strong>{dateLabel} →</strong>
+    </a>
+  </section>
+
+  <div class="now-grid">
+    <section class="now-panel now-wide" aria-labelledby="now-recent">
+      <h2 id="now-recent">Recent changes <span>{data.recent.length}</span></h2>
+      <div class="now-list">
+        {data.recent.map((a) => (
+          <a class="now-row" href={`${BASE_URL}wiki/${a.slug}`}>
+            <span class="now-row-main">
+              <strong>{a.title}</strong>
+              <small>{excerpt(a.firstParagraph || a.type, 120)}</small>
+            </span>
+            <span class="now-date">{dateOf(a)}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="now-panel" aria-labelledby="now-projects">
+      <h2 id="now-projects">Active projects <span>{data.projects.length}</span></h2>
+      {data.projects.length ? (
+        <div class="now-list">
+          {data.projects.map((a) => (
+            <a class="now-row compact" href={`${BASE_URL}wiki/${a.slug}`}>
+              <span class="now-row-main"><strong>{a.title}</strong><small>{excerpt(a.firstParagraph || 'Active project', 88)}</small></span>
+              <span class="now-date">{dateOf(a)}</span>
+            </a>
+          ))}
+        </div>
+      ) : <p class="now-empty">No active projects were found.</p>}
+    </section>
+
+    <section class="now-panel" aria-labelledby="now-loops">
+      <h2 id="now-loops">Open loops <span>{data.loops.length}</span></h2>
+      {data.loops.length ? (
+        <div class="now-list">
+          {data.loops.map((loop) => (
+            <a class="now-row compact" href={`${BASE_URL}wiki/${loop.article.slug}`}>
+              <span class="now-row-main"><strong>{loop.text}</strong><small>{loop.article.title} · {loop.label}</small></span>
+            </a>
+          ))}
+        </div>
+      ) : <p class="now-empty">No explicit open-question or next-step sections surfaced.</p>}
+    </section>
+
+    <section class="now-panel" aria-labelledby="now-receipts">
+      <h2 id="now-receipts">Agent receipts <span>{data.receipts.length}</span></h2>
+      {data.receipts.length ? (
+        <div class="now-list">
+          {data.receipts.map((receipt) => (
+            <a class="now-row compact" href={`${BASE_URL}wiki/${receipt.article.slug}`}>
+              <span class="now-row-main"><strong>{excerpt(receipt.text, 118)}</strong><small>{receipt.article.title}</small></span>
+              <span class="now-verified">verified trail</span>
+            </a>
+          ))}
+        </div>
+      ) : <p class="now-empty">No published action receipts surfaced.</p>}
+    </section>
+
+    <section class="now-panel now-resurface" aria-labelledby="now-resurface">
+      <h2 id="now-resurface">Bring this back</h2>
+      {data.resurfaced ? (
+        <a href={`${BASE_URL}wiki/${data.resurfaced.slug}`}>
+          <span class="now-star" aria-hidden="true"></span>
+          <strong>{data.resurfaced.title}</strong>
+          <p>{excerpt(data.resurfaced.firstParagraph || 'A substantial older page from the vault.', 180)}</p>
+          <small>Last touched {dateOf(data.resurfaced)} · selected deterministically for today</small>
+        </a>
+      ) : <p class="now-empty">Nothing eligible for resurfacing today.</p>}
+    </section>
+  </div>
+
+  <p class="now-footnote">Build-time view only. It reads existing published notes and writes nothing back to the vault.</p>
+</Base>
