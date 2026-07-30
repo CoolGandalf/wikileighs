@@ -26,7 +26,8 @@ const spent = ((now.getTime() - DOB.getTime()) / (end.getTime() - DOB.getTime())
   <div class="memento-row">
     <span class="memento-counts">
       <span data-mm-days>{days.toLocaleString()}</span> days ·
-      <span data-mm-weeks>{Math.floor(days / 7).toLocaleString()}</span> weeks ·
+      <span class="memento-weeks"><span data-mm-weeks>{Math.floor(days / 7).toLocaleString()}</span> weeks · </span>
+      <span data-mm-months>{Math.floor(days / 30.4369).toLocaleString()}</span> months ·
       <span data-mm-summers>{end.getFullYear() - now.getFullYear()}</span> summers left
     </span>
     <span class="memento-spent"><span data-mm-pct>{spent.toFixed(1)}</span>% spent</span>
@@ -57,6 +58,11 @@ const spent = ((now.getTime() - DOB.getTime()) / (end.getTime() - DOB.getTime())
     .memento { padding: 6px 16px 0; font-size: 10px; }
     .memento-spent { display: none; }
   }
+  /* Below ~400px all four units no longer fit on one line; weeks is the
+     most redundant of them, so it goes first rather than letting the row wrap. */
+  @media (max-width: 400px) {
+    .memento-weeks { display: none; }
+  }
 </style>
 
 <script is:inline>
@@ -71,6 +77,7 @@ const spent = ((now.getTime() - DOB.getTime()) / (end.getTime() - DOB.getTime())
       var pct = ((now - dob) / (end - dob)) * 100;
       el.querySelector('[data-mm-days]').textContent = days.toLocaleString();
       el.querySelector('[data-mm-weeks]').textContent = Math.floor(days / 7).toLocaleString();
+      el.querySelector('[data-mm-months]').textContent = Math.floor(days / 30.4369).toLocaleString();
       el.querySelector('[data-mm-summers]').textContent =
         new Date(end).getFullYear() - new Date(now).getFullYear();
       el.querySelector('[data-mm-pct]').textContent = pct.toFixed(1);
