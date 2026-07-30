@@ -1,0 +1,82 @@
+---
+/**
+ * Memento mori strip — a countdown to a deliberately conservative target age.
+ *
+ * Target: age 83. That is Leigh's personalised median age at death (88, derived
+ * from the SSA 2023 male period life table scaled to a 0.54 hazard multiplier)
+ * minus a 5-year haircut. Roughly a 65% chance of reaching it — the clock is
+ * meant to run fast, not to be a prediction.
+ */
+const DOB = new Date('1985-01-22T00:00:00');
+const TARGET_AGE = 83;
+
+const end = new Date(DOB);
+end.setFullYear(DOB.getFullYear() + TARGET_AGE);
+
+const now = new Date();
+const days = Math.floor((end.getTime() - now.getTime()) / 86400000);
+const spent = ((now.getTime() - DOB.getTime()) / (end.getTime() - DOB.getTime())) * 100;
+---
+<div
+  class="memento"
+  data-dob={DOB.toISOString()}
+  data-end={end.toISOString()}
+  aria-label={`Memento mori: ${days.toLocaleString()} days remaining to age ${TARGET_AGE}`}
+>
+  <div class="memento-row">
+    <span class="memento-counts">
+      <span data-mm-days>{days.toLocaleString()}</span> days ·
+      <span data-mm-weeks>{Math.floor(days / 7).toLocaleString()}</span> weeks ·
+      <span data-mm-summers>{end.getFullYear() - now.getFullYear()}</span> summers left
+    </span>
+    <span class="memento-spent"><span data-mm-pct>{spent.toFixed(1)}</span>% spent</span>
+  </div>
+  <div class="memento-track"><div class="memento-fill" style={`width:${spent.toFixed(2)}%`} data-mm-fill></div></div>
+</div>
+
+<style>
+  .memento {
+    background: var(--raised);
+    border-bottom: 1px solid var(--gold-hairline);
+    padding: 6px 24px 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--t-muted);
+  }
+  .memento-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .memento-spent { color: var(--t-muted-soft); color: rgba(139, 147, 165, 0.7); }
+  .memento-track { height: 2px; background: var(--t-muted-soft); margin-top: 6px; }
+  .memento-fill { height: 2px; background: var(--gold-soft); }
+  @media (max-width: 560px) {
+    .memento { padding: 6px 16px 0; font-size: 10px; }
+    .memento-spent { display: none; }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var el = document.querySelector('.memento');
+    if (!el) return;
+    var dob = new Date(el.dataset.dob).getTime();
+    var end = new Date(el.dataset.end).getTime();
+    function tick() {
+      var now = Date.now();
+      var days = Math.floor((end - now) / 86400000);
+      var pct = ((now - dob) / (end - dob)) * 100;
+      el.querySelector('[data-mm-days]').textContent = days.toLocaleString();
+      el.querySelector('[data-mm-weeks]').textContent = Math.floor(days / 7).toLocaleString();
+      el.querySelector('[data-mm-summers]').textContent =
+        new Date(end).getFullYear() - new Date(now).getFullYear();
+      el.querySelector('[data-mm-pct]').textContent = pct.toFixed(1);
+      el.querySelector('[data-mm-fill]').style.width = pct.toFixed(2) + '%';
+    }
+    tick();
+    setInterval(tick, 60000);
+  })();
+</script>
