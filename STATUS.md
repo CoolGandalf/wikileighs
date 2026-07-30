@@ -1,7 +1,18 @@
 # WikiLeighs — STATUS
 
-**Updated:** 2026-07-25 (macbookair, branch `main`) — **Constellation redesign LIVE**
-**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP). Deployed via merge `0130f77`; **rollback = revert that merge commit.** ~2,494 pages.
+**Updated:** 2026-07-30 (macbookair, branch `main`) — **memento mori banner shipped**
+**Status:** LIVE at `https://lgl.gg/wikileighs/` behind Cloudflare Access (only `leigh.llewelyn@gmail.com`, email OTP). Constellation redesign deployed via merge `0130f77`; **rollback = revert that merge commit.** ~2,603 pages.
+
+## This session (2026-07-30): memento mori banner
+
+A countdown strip above `TopBar` on every page — `src/components/MementoMori.astro`, one import + one line in `src/layouts/Base.astro`. Commits `fef076c` (strip) and `2612a13` (months added). Deploy green.
+
+- Reads `15,150 days · 2,164 weeks · 497 months · 42 summers left` with `50.0% spent` right-aligned, over a 2px track filled in `--gold-soft` to the fraction of life elapsed.
+- **Target age 83.** Leigh's personalised median age at death is 88 — SSA 2023 male period life table from age 41, every `q_x` scaled by a 0.54 hazard multiplier — minus a deliberate five-year haircut. ~65% chance of reaching it; the clock is meant to run fast, not to predict.
+- `DOB` (`1985-01-22`) and `TARGET_AGE` are the only two constants. Canonical DOB also lives in the vault at `notes/Cardiovascular Risk & Lipid History.md`.
+- Server-rendered for first paint, then ticked client-side every 60s. Verified at 1280/375/320px: `%spent` hides ≤560px, `weeks` hides ≤400px so the row never wraps to two lines.
+- **Build needs `VAULT_ROOT`** — `VAULT_ROOT=~/Projects/vault npm run build`, else page generation throws.
+- Added an untracked `.claude/launch.json` with a `wikileighs-dev` entry (`npm run dev`, port 4321). Not committed.
 
 ## Current design (2026-07-25): "Constellation / The Instrument"
 
